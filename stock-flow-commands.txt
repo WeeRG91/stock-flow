@@ -1,0 +1,29 @@
+dotnet new sln -n StockFlow
+dotnet new classlib -n StockFlow.Domain -o src/StockFlow.Domain -f net10.0
+dotnet sln StockFlow.slnx add src/StockFlow.Domain/StockFlow.Domain.csproj
+dotnet new classlib -n StockFlow.Application -o src/StockFlow.Application -f net10.0
+dotnet sln StockFlow.slnx add src/StockFlow.Application/StockFlow.Application.csproj
+dotnet add src/StockFlow.Application/StockFlow.Application.csproj reference src/StockFlow.Domain/StockFlow.Domain.csproj
+dotnet new classlib -n StockFlow.Infrastructure -o src/StockFlow.Infrastructure -f net10.0
+dotnet sln StockFlow.slnx add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj
+dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj reference src/StockFlow.Application/StockFlow.Application.csproj
+dotnet new web -n StockFlow.API -o src/StockFlow.API -f net10.0
+dotnet sln StockFlow.slnx add src/StockFlow.API/StockFlow.API.csproj
+dotnet add src/StockFlow.API/StockFlow.API.csproj reference src/StockFlow.Application/StockFlow.Application.csproj src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj
+
+dotnet new xunit -n StockFlow.Domain.Tests -o tests/StockFlow.Domain.Tests -f net10.0
+dotnet sln StockFlow.slnx add tests/StockFlow.Domain.Tests/StockFlow.Domain.Tests.csproj
+dotnet add tests/StockFlow.Domain.Tests/StockFlow.Domain.Tests.csproj reference src/StockFlow.Domain/StockFlow.Domain.csproj
+dotnet test tests/StockFlow.Domain.Tests/StockFlow.Domain.Tests.csproj
+
+dotnet new xunit -n StockFlow.Application.Tests -o tests/StockFlow.Application.Tests -f net10.0
+dotnet sln StockFlow.slnx add tests/StockFlow.Application.Tests/StockFlow.Application.Tests.csproj
+dotnet add tests/StockFlow.Application.Tests/StockFlow.Application.Tests.csproj reference src/StockFlow.Application/StockFlow.Application.csproj
+
+install only the PostgreSQL EF provider into Infrastructure
+dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package Npgsql.EntityFrameworkCore.PostgreSQL --version "10.*"
+dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package Npgsql.EntityFrameworkCore.PostgreSQL --version 10.0.3
+
+verify the solution
+dotnet build StockFlow.slnx
+dotnet test StockFlow.slnx --no-build
