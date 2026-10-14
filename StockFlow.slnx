@@ -8,5 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/StockFlow.Application.Tests/StockFlow.Application.Tests.csproj" />
     <Project Path="tests/StockFlow.Domain.Tests/StockFlow.Domain.Tests.csproj" />
+    <Project Path="tests/StockFlow.Infrastructure.Tests/StockFlow.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
