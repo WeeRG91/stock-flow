@@ -104,5 +104,16 @@ namespace StockFlow.Domain.Entities
             _pendingMovements.Add(movement);
             QuantityOnHand = newQuantity;
         }
+
+        public void AcknowledgePersistedMovements(
+            IEnumerable<Guid> movementIds)
+        {
+            ArgumentNullException.ThrowIfNull(movementIds);
+
+            var persistedIds = movementIds.ToHashSet();
+
+            _pendingMovements.RemoveAll(
+                movement => persistedIds.Contains(movement.Id));
+        }
     }
 }

@@ -417,4 +417,87 @@ public class InventoryTests
         Assert.Equal(10, inventory.QuantityOnHand);
         Assert.Equal(movementsBefore, inventory.PendingMovements.ToArray());
     }
+
+    [Fact]
+    public void AcknowledgePersistedMovements_RemovesOnlySpecifiedMovements()
+    {
+        var inventory = new Inventory(Guid.NewGuid(), Guid.NewGuid());
+        inventory.ReceiveStock(10, "First receipt", OccurredAt);
+        var firstMovement = Assert.Single(inventory.PendingMovements);
+
+        inventory.ReceiveStock(5, "Second receipt", OccurredAt.AddMinutes(1));
+        var secondMovement = inventory.PendingMovements[1];
+
+        inventory.AcknowledgePersistedMovements(
+            new[] { firstMovement.Id });
+
+        Assert.Same(
+            secondMovement,
+            Assert.Single(inventory.PendingMovements));
+        Assert.Equal(15, inventory.QuantityOnHand);
+
+        // Acknowledgment does not alter the movement object.
+        Assert.Equal(10, firstMovement.QuantityChange);
+        Assert.Equal("First receipt", firstMovement.Reason);
+    }
+
+    [Fact]
+    public void AcknowledgePersistedMovements_WithAllPendingIds_EmptiesBuffer()
+    {
+        var inventory = new Inventory(Guid.NewGuid(), Guid.NewGuid());
+        inventory.ReceiveStock(10, "Receipt", OccurredAt);
+        inventory.RemoveStock(4, "Removal", OccurredAt);
+
+        var ids = inventory.PendingMovements.Select(m => m.Id).ToArray();
+
+        inventory.AcknowledgePersistedMovements(ids);
+
+        Assert.Empty(inventory.PendingMovements);
+        Assert.Equal(6, inventory.QuantityOnHand);
+    }
+
+    [Fact]
+    public void AcknowledgePersistedMovements_RepeatedCall_PreservesNewMovements()
+    {
+        var inventory = new Inventory(Guid.NewGuid(), Guid.NewGuid());
+        inventory.ReceiveStock(10, "First receipt", OccurredAt);
+        var persistedId = Assert.Single(inventory.PendingMovements).Id;
+
+        inventory.AcknowledgePersistedMovements(new[] { persistedId });
+        inventory.ReceiveStock(5, "New receipt", OccurredAt);
+        var newMovement = Assert.Single(inventory.PendingMovements);
+
+        inventory.AcknowledgePersistedMovements(new[] { persistedId });
+
+        Assert.Same(newMovement, Assert.Single(inventory.PendingMovements));
+        Assert.Equal(15, inventory.QuantityOnHand);
+    }
+
+    [Fact]
+    public void AcknowledgePersistedMovements_WithEmptyOrUnknownIds_PreservesBuffer()
+    {
+        var inventory = new Inventory(Guid.NewGuid(), Guid.NewGuid());
+        inventory.ReceiveStock(10, "Receipt", OccurredAt);
+        var movement = Assert.Single(inventory.PendingMovements);
+
+        inventory.AcknowledgePersistedMovements(Array.Empty<Guid>());
+        inventory.AcknowledgePersistedMovements(new[] { Guid.NewGuid() });
+
+        Assert.Same(movement, Assert.Single(inventory.PendingMovements));
+        Assert.Equal(10, inventory.QuantityOnHand);
+    }
+
+    [Fact]
+    public void AcknowledgePersistedMovements_WithNullIds_ThrowsAndPreservesBuffer()
+    {
+        var inventory = new Inventory(Guid.NewGuid(), Guid.NewGuid());
+        inventory.ReceiveStock(10, "Receipt", OccurredAt);
+        var movement = Assert.Single(inventory.PendingMovements);
+
+        Assert.Throws<ArgumentNullException>(
+            () => inventory.AcknowledgePersistedMovements(null!));
+
+        Assert.Same(movement, Assert.Single(inventory.PendingMovements));
+        Assert.Equal(10, inventory.QuantityOnHand);
+    }
 }
