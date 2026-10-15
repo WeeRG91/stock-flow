@@ -39,3 +39,25 @@ dotnet ef --version
 
 add EF’s design-time package to Infrastructure
 dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package Microsoft.EntityFrameworkCore.Design --version 10.0.4
+
+$stockFlowPassword = Read-Host "StockFlow database password" -AsSecureString
+$stockFlowPlainPassword = (
+    [System.Net.NetworkCredential]::new("", $stockFlowPassword)
+).Password
+$stockFlowEscapedPassword = $stockFlowPlainPassword.Replace('"', '""')
+$env:STOCKFLOW_DEV_CONNECTION_STRING =
+    'Host=localhost;Port=5432;Database=stockflow_dev;Username=stockflow_dev;Password="' +
+    $stockFlowEscapedPassword + '"'
+Remove-Variable stockFlowPassword, stockFlowPlainPassword, stockFlowEscapedPassword
+
+dotnet ef dbcontext info --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
+dotnet ef migrations add InitialCreate --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure --output-dir Persistence/Migrations
+dotnet ef migrations script 0 InitialCreate --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure --output initial-create.sql
+dotnet ef database update InitialCreate --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
+
+dotnet ef migrations add AddInventoryConcurrencyToken --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure --output-dir Persistence/Migrations
+dotnet ef migrations script InitialCreate AddInventoryConcurrencyToken --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure --output inventory-concurrency.sql
+dotnet ef database update AddInventoryConcurrencyToken --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
+dotnet ef migrations has-pending-model-changes --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
+
+Remove-Item Env:STOCKFLOW_DEV_CONNECTION_STRING

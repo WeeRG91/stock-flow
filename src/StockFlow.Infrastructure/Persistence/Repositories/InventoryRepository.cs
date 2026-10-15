@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using StockFlow.Application.Abstractions.Persistence;
+using StockFlow.Application.Exceptions;
 using InventoryEntity = StockFlow.Domain.Entities.Inventory;
 
 namespace StockFlow.Infrastructure.Persistence.Repositories
@@ -66,6 +68,27 @@ namespace StockFlow.Infrastructure.Persistence.Repositories
                 }
 
                 await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _saveFailed = true;
+
+                throw new InventoryConflictException(
+                    inventory.ProductId,
+                    inventory.WarehouseId);
+            }
+            catch (DbUpdateException exception)
+                when (exception.InnerException is PostgresException
+                {
+                    SqlState: PostgresErrorCodes.UniqueViolation,
+                    ConstraintName: "IX_Inventories_ProductId_WarehouseId"
+                })
+            {
+                _saveFailed = true;
+
+                throw new InventoryConflictException(
+                    inventory.ProductId,
+                    inventory.WarehouseId);
             }
             catch
             {

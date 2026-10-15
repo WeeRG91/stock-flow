@@ -21,6 +21,9 @@ namespace StockFlow.Infrastructure.Persistence.Configurations
             builder.Property(inventory => inventory.Id)
                 .ValueGeneratedNever();
 
+            builder.Property<uint>("Version")
+                .IsRowVersion();
+
             builder.Property(inventory => inventory.ProductId)
                 .IsRequired();
 
