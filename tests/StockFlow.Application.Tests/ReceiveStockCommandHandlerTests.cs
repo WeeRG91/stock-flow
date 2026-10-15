@@ -1,4 +1,5 @@
-﻿using StockFlow.Application.Inventory.ReceiveStock;
+using StockFlow.Application.Exceptions;
+using StockFlow.Application.Inventory.ReceiveStock;
 using StockFlow.Application.Tests.Fakes;
 using StockFlow.Domain.Entities;
 using StockFlow.Domain.Enums;
@@ -234,8 +235,19 @@ namespace StockFlow.Application.Tests
                 setup.Warehouse.Id,
                 10);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(
-                () => setup.Handler.HandleAsync(command));
+            if (inactive)
+            {
+                await Assert.ThrowsAsync<BusinessRuleException>(
+                    () => setup.Handler.HandleAsync(command));
+            }
+            else
+            {
+                var exception = await Assert.ThrowsAsync<ResourceNotFoundException>(
+                    () => setup.Handler.HandleAsync(command));
+
+                Assert.Equal("Product", exception.ResourceName);
+                Assert.Equal(command.ProductId, exception.ResourceId);
+            }
 
             Assert.Equal(1, setup.Products.GetByIdCallCount);
             Assert.Equal(0, setup.Warehouses.GetByIdCallCount);
@@ -261,8 +273,19 @@ namespace StockFlow.Application.Tests
                 inactive ? setup.Warehouse.Id : Guid.NewGuid(),
                 10);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(
-                () => setup.Handler.HandleAsync(command));
+            if (inactive)
+            {
+                await Assert.ThrowsAsync<BusinessRuleException>(
+                    () => setup.Handler.HandleAsync(command));
+            }
+            else
+            {
+                var exception = await Assert.ThrowsAsync<ResourceNotFoundException>(
+                    () => setup.Handler.HandleAsync(command));
+
+                Assert.Equal("Warehouse", exception.ResourceName);
+                Assert.Equal(command.WarehouseId, exception.ResourceId);
+            }
 
             Assert.Equal(1, setup.Products.GetByIdCallCount);
             Assert.Equal(1, setup.Warehouses.GetByIdCallCount);
@@ -285,7 +308,7 @@ namespace StockFlow.Application.Tests
             var command = new ReceiveStockCommand(
                 setup.Product.Id, setup.Warehouse.Id, 1);
 
-            await Assert.ThrowsAsync<OverflowException>(
+            await Assert.ThrowsAsync<BusinessRuleException>(
                 () => setup.Handler.HandleAsync(command));
 
             Assert.Equal(int.MaxValue, inventory.QuantityOnHand);

@@ -24,6 +24,11 @@ dotnet new xunit -n StockFlow.Infrastructure.Tests -o tests/StockFlow.Infrastruc
 dotnet sln StockFlow.slnx add tests/StockFlow.Infrastructure.Tests/StockFlow.Infrastructure.Tests.csproj
 dotnet add tests/StockFlow.Infrastructure.Tests/StockFlow.Infrastructure.Tests.csproj reference src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj
 
+dotnet new xunit -n StockFlow.API.Tests -o tests/StockFlow.API.Tests -f net10.0
+dotnet sln StockFlow.slnx add tests/StockFlow.API.Tests/StockFlow.API.Tests.csproj
+dotnet add tests/StockFlow.API.Tests/StockFlow.API.Tests.csproj reference src/StockFlow.API/StockFlow.API.csproj
+dotnet add tests/StockFlow.API.Tests/StockFlow.API.Tests.csproj package Microsoft.AspNetCore.Mvc.Testing --version 10.0.13
+
 install only the PostgreSQL EF provider into Infrastructure
 dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package Npgsql.EntityFrameworkCore.PostgreSQL --version "10.*"
 dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package Npgsql.EntityFrameworkCore.PostgreSQL --version 10.0.3
@@ -61,3 +66,7 @@ dotnet ef database update AddInventoryConcurrencyToken --project src/StockFlow.I
 dotnet ef migrations has-pending-model-changes --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
 
 Remove-Item Env:STOCKFLOW_DEV_CONNECTION_STRING
+dotnet user-secrets init --project src/StockFlow.API
+
+add ASP.NET Core’s built-in OpenAPI document generation
+dotnet add src/StockFlow.API/StockFlow.API.csproj package Microsoft.AspNetCore.OpenApi --version 10.0.13

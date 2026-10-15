@@ -1,5 +1,6 @@
 ﻿using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
+using StockFlow.Application.Exceptions;
 using InventoryEntity = StockFlow.Domain.Entities.Inventory;
 
 namespace StockFlow.Application.Inventory.ReceiveStock
@@ -41,12 +42,14 @@ namespace StockFlow.Application.Inventory.ReceiveStock
 
             if (product is null)
             {
-                throw new InvalidOperationException("Product was not found.");
+                throw new ResourceNotFoundException(
+                   "Product",
+                   command.ProductId);
             }
 
             if (!product.IsActive)
             {
-                throw new InvalidOperationException("Product is inactive.");
+                throw new BusinessRuleException("Product is inactive.");
             }
 
             var warehouse = await _warehouses.GetByIdAsync(
@@ -55,12 +58,14 @@ namespace StockFlow.Application.Inventory.ReceiveStock
 
             if (warehouse is null)
             {
-                throw new InvalidOperationException("Warehouse was not found.");
+                throw new ResourceNotFoundException(
+                    "Warehouse",
+                    command.WarehouseId);
             }
 
             if (!warehouse.IsActive)
             {
-                throw new InvalidOperationException("Warehouse is inactive.");
+                throw new BusinessRuleException("Warehouse is inactive.");
             }
 
             var inventory = await _inventories.GetByProductAndWarehouseAsync(
@@ -72,10 +77,18 @@ namespace StockFlow.Application.Inventory.ReceiveStock
                 command.ProductId,
                 command.WarehouseId);
 
-            inventory.ReceiveStock(
-                command.Quantity,
-                "Manual stock receipt",
-                _clock.UtcNow);
+            try
+            {
+                inventory.ReceiveStock(
+                    command.Quantity,
+                    "Manual stock receipt",
+                    _clock.UtcNow);
+            }
+            catch (OverflowException)
+            {
+                throw new BusinessRuleException(
+                    "Receiving this quantity would exceed the supported stock limit.");
+            }
 
             await _inventories.SaveAsync(inventory, cancellationToken);
 
