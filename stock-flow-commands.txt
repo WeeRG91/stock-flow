@@ -70,3 +70,14 @@ dotnet user-secrets init --project src/StockFlow.API
 
 add ASP.NET Core’s built-in OpenAPI document generation
 dotnet add src/StockFlow.API/StockFlow.API.csproj package Microsoft.AspNetCore.OpenApi --version 10.0.13
+
+Frontend
+node --version
+npm.cmd --version
+npm.cmd create vite@latest frontend -- --template react-ts
+cd frontend
+npm.cmd install
+npm.cmd run dev
+
+npm.cmd run build
+npm.cmd run lint
