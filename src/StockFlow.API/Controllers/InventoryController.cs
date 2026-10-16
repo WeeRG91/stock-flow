@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StockFlow.API.Contracts.Inventory;
+using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Inventory.ReceiveStock;
 
 namespace StockFlow.API.Controllers
@@ -9,11 +10,40 @@ namespace StockFlow.API.Controllers
     public sealed class InventoryController : ControllerBase
     {
         private readonly ReceiveStockCommandHandler _handler;
+        private readonly GetInventoryQueryHandler _queryHandler;
 
-        public InventoryController(ReceiveStockCommandHandler handler)
+        public InventoryController(
+            ReceiveStockCommandHandler handler,
+            GetInventoryQueryHandler queryHandler)
         {
             ArgumentNullException.ThrowIfNull(handler);
+            ArgumentNullException.ThrowIfNull(queryHandler);
+
             _handler = handler;
+            _queryHandler = queryHandler;
+        }
+
+        [HttpGet]
+        [ProducesResponseType(
+            typeof(GetInventoryResult),
+            StatusCodes.Status200OK)]
+        [ProducesResponseType(
+            typeof(ValidationProblemDetails),
+            StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(
+            typeof(ProblemDetails),
+            StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<GetInventoryResult>> Get(
+            [FromQuery] GetInventoryRequest request,
+            CancellationToken cancellationToken)
+        {
+            var result = await _queryHandler.HandleAsync(
+                new GetInventoryQuery(
+                    request.PageNumber,
+                    request.PageSize),
+                cancellationToken);
+
+            return Ok(result);
         }
 
         [HttpPost("receive")]

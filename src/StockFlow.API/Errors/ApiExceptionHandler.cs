@@ -15,6 +15,34 @@ namespace StockFlow.API.Errors
 
         public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
         {
+            if (exception is RequestValidationException validation)
+            {
+                var validationProblem = new ValidationProblemDetails(
+                    new Dictionary<string, string[]>
+                    {
+                        [validation.FieldName] = new[] { validation.Message }
+                    })
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "One or more validation errors occurred.",
+                    Instance = httpContext.Request.Path.Value
+                };
+
+                validationProblem.Extensions["traceId"] =
+                    httpContext.TraceIdentifier;
+
+                httpContext.Response.StatusCode =
+                    StatusCodes.Status400BadRequest;
+
+                await httpContext.Response.WriteAsJsonAsync(
+                    validationProblem,
+                    options: null,
+                    contentType: "application/problem+json",
+                    cancellationToken: cancellationToken);
+
+                return true;
+            }
+
             var (status, title, detail) = exception switch
             {
                 ResourceNotFoundException missing => (
