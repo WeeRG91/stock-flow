@@ -1,4 +1,7 @@
 using StockFlow.API.Errors;
+using StockFlow.API.Hubs;
+using StockFlow.API.Notifications;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Inventory.ReceiveStock;
 using StockFlow.Application.Products.GetProducts;
@@ -10,6 +13,7 @@ using StockFlow.Infrastructure.Persistence;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
@@ -18,6 +22,8 @@ builder.Services.AddScoped<ReceiveStockCommandHandler>();
 builder.Services.AddScoped<GetProductsQueryHandler>();
 builder.Services.AddScoped<GetWarehousesQueryHandler>();
 builder.Services.AddScoped<GetInventoryQueryHandler>();
+
+builder.Services.AddScoped<IInventoryChangeNotifier, SignalRInventoryChangeNotifier>();
 
 var connectionString = builder.Configuration.GetConnectionString("StockFlow");
 
@@ -62,6 +68,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+app.MapHub<InventoryHub>("/hubs/inventory");
 
 app.Run();
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting;
 using StockFlow.Application.Exceptions;
 using StockFlow.Application.Inventory.ReceiveStock;
 using StockFlow.Domain.Enums;
@@ -72,11 +72,33 @@ namespace StockFlow.API.Tests
             Assert.Equal(factory.Product.Id, saved.ProductId);
             Assert.Equal(factory.Warehouse.Id, saved.WarehouseId);
             Assert.Equal(1, factory.Inventories.SaveCallCount);
+            Assert.Equal(1, factory.NotificationClient.SendCallCount);
 
             var movement = Assert.Single(saved.PendingMovements);
             Assert.Equal(10, movement.QuantityChange);
             Assert.Equal(StockMovementType.Receipt, movement.Type);
             Assert.Equal(factory.OccurredAt, movement.OccurredAt);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Receive_WhenNotificationFails_StillReturnsSuccessfulReceipt(bool cancelled)
+        {
+            using var factory = new StockFlowApiFactory();
+            factory.NotificationClient.SendException = cancelled
+                ? new OperationCanceledException("Simulated notification cancellation.")
+                : new InvalidOperationException("Simulated notification failure.");
+            using var client = factory.CreateClient();
+            using var response = await client.PostAsJsonAsync(Endpoint, ValidRequest(factory));
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<ReceiveStockResult>();
+            Assert.NotNull(result);
+            Assert.Equal(10, result.QuantityOnHand);
+            Assert.NotNull(factory.Inventories.LastSavedInventory);
+            Assert.Equal(factory.Inventories.LastSavedInventory.Id, result.InventoryId);
+            Assert.Equal(1, factory.Inventories.SaveCallCount);
+            Assert.Equal(1, factory.NotificationClient.SendCallCount);
         }
 
         [Theory]
@@ -138,6 +160,7 @@ namespace StockFlow.API.Tests
 
             Assert.Equal(0, factory.Inventories.GetCallCount);
             Assert.Equal(0, factory.Inventories.SaveCallCount);
+            Assert.Equal(0, factory.NotificationClient.SendCallCount);
         }
 
         [Fact]
@@ -156,6 +179,7 @@ namespace StockFlow.API.Tests
 
             Assert.Equal(0, factory.Inventories.GetCallCount);
             Assert.Equal(0, factory.Inventories.SaveCallCount);
+            Assert.Equal(0, factory.NotificationClient.SendCallCount);
         }
 
         [Theory]
@@ -185,6 +209,7 @@ namespace StockFlow.API.Tests
 
             Assert.Equal(0, factory.Inventories.GetCallCount);
             Assert.Equal(0, factory.Inventories.SaveCallCount);
+            Assert.Equal(0, factory.NotificationClient.SendCallCount);
         }
 
         [Theory]
@@ -219,6 +244,7 @@ namespace StockFlow.API.Tests
                 problem.GetProperty("title").GetString());
 
             Assert.Equal(0, factory.Inventories.SaveCallCount);
+            Assert.Equal(0, factory.NotificationClient.SendCallCount);
         }
 
         [Fact]
@@ -246,6 +272,7 @@ namespace StockFlow.API.Tests
                 problem.GetProperty("title").GetString());
 
             Assert.Equal(1, factory.Inventories.SaveCallCount);
+            Assert.Equal(0, factory.NotificationClient.SendCallCount);
         }
 
         [Fact]
@@ -278,6 +305,7 @@ namespace StockFlow.API.Tests
             var body = await response.Content.ReadAsStringAsync();
             Assert.DoesNotContain(internalMessage, body);
             Assert.DoesNotContain("InvalidOperationException", body);
+            Assert.Equal(0, factory.NotificationClient.SendCallCount);
         }
 
         [Fact]
@@ -315,6 +343,7 @@ namespace StockFlow.API.Tests
             Assert.Equal(int.MaxValue, inventory.QuantityOnHand);
             Assert.Equal(movementsBefore, inventory.PendingMovements.ToArray());
             Assert.Equal(0, factory.Inventories.SaveCallCount);
+            Assert.Equal(0, factory.NotificationClient.SendCallCount);
         }
 
         [Theory]

@@ -1,4 +1,5 @@
-﻿using StockFlow.Application.Abstractions.Persistence;
+﻿using StockFlow.Application.Abstractions.Notifications;
+using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Exceptions;
 using InventoryEntity = StockFlow.Domain.Entities.Inventory;
@@ -11,22 +12,26 @@ namespace StockFlow.Application.Inventory.ReceiveStock
         private readonly IWarehouseRepository _warehouses;
         private readonly IInventoryRepository _inventories;
         private readonly IClock _clock;
+        private readonly IInventoryChangeNotifier _notifier;
 
         public ReceiveStockCommandHandler(
             IProductRepository products,
             IWarehouseRepository warehouses,
             IInventoryRepository inventories,
-            IClock clock)
+            IClock clock,
+            IInventoryChangeNotifier notifier)
         {
             ArgumentNullException.ThrowIfNull(products, nameof(products));
             ArgumentNullException.ThrowIfNull(warehouses, nameof(warehouses));
             ArgumentNullException.ThrowIfNull(inventories, nameof(inventories));
             ArgumentNullException.ThrowIfNull(clock, nameof(clock));
+            ArgumentNullException.ThrowIfNull(notifier, nameof(notifier));
 
             _products = products;
             _warehouses = warehouses;
             _inventories = inventories;
             _clock = clock;
+            _notifier = notifier;
         }
 
         public async Task<ReceiveStockResult> HandleAsync(
@@ -91,6 +96,10 @@ namespace StockFlow.Application.Inventory.ReceiveStock
             }
 
             await _inventories.SaveAsync(inventory, cancellationToken);
+
+            await _notifier.NotifyAsync(
+                new InventoryChanged(),
+                cancellationToken);
 
             return new ReceiveStockResult(
                 inventory.Id,

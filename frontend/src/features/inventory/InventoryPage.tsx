@@ -7,6 +7,7 @@ import { useInventory } from "./useInventory";
 import { useWarehouses } from "../warehouses/useWarehouses";
 import { useProducts } from "../products/useProducts";
 import { ReceiveStockForm } from "./ReceiveStockForm";
+import { useInventoryRealtime } from "./useInventoryRealtime";
 
 const pageSize = 20;
 
@@ -16,6 +17,7 @@ export function InventoryPage() {
 
   const productsQuery = useProducts();
   const warehousesQuery = useWarehouses();
+  const connectionStatus = useInventoryRealtime();
 
   const hasNextPage =
     query.data !== undefined &&
@@ -27,6 +29,16 @@ export function InventoryPage() {
         title="Inventory"
         description="Review stock balances across NovaTrade's warehouses."
       />
+
+      <p role="status" className="text-sm text-muted-foreground">
+        {connectionStatus === "connected"
+          ? "Live inventory updates connected."
+          : connectionStatus === "connecting"
+            ? "Connecting to live inventory updates…"
+            : connectionStatus === "reconnecting"
+              ? "Reconnecting to live inventory updates…"
+              : "Live updates are disconnected. Retrying automatically…"}
+      </p>
 
       {productsQuery.isPending || warehousesQuery.isPending ? (
         <p role="status">Loading stock receipt options…</p>

@@ -11,6 +11,7 @@ namespace StockFlow.Application.Tests.Fakes
         public int GetCallCount { get; private set; }
         public int SaveCallCount { get; private set; }
         public InventoryEntity? LastSavedInventory { get; private set; }
+        public Exception? SaveException { get; set; }
 
         public void Add(InventoryEntity inventory)
         {
@@ -40,6 +41,11 @@ namespace StockFlow.Application.Tests.Fakes
         {
             cancellationToken.ThrowIfCancellationRequested();
             SaveCallCount++;
+
+            if (SaveException is not null)
+            {
+                return Task.FromException(SaveException);
+            }
 
             _inventories[(inventory.ProductId, inventory.WarehouseId)] =
                 inventory;

@@ -16,7 +16,8 @@ namespace StockFlow.Application.Tests
             FakeProductRepository Products,
             FakeWarehouseRepository Warehouses,
             FakeInventoryRepository Inventories,
-            FakeClock Clock) CreateSetup()
+            FakeClock Clock,
+            FakeInventoryChangeNotifier Notifier) CreateSetup()
         {
             var product = new Product("Office Chair", "CHAIR-BLK");
             var warehouse = new Warehouse(
@@ -33,12 +34,13 @@ namespace StockFlow.Application.Tests
             var inventories = new FakeInventoryRepository();
             var clock = new FakeClock();
 
+            var notifier = new FakeInventoryChangeNotifier();
             var handler = new ReceiveStockCommandHandler(
-                products, warehouses, inventories, clock);
+                products, warehouses, inventories, clock, notifier);
 
             return (
                 handler, product, warehouse,
-                products, warehouses, inventories, clock);
+                products, warehouses, inventories, clock, notifier);
         }
 
         [Fact]
@@ -60,11 +62,13 @@ namespace StockFlow.Application.Tests
             var inventories = new FakeInventoryRepository();
             var clock = new FakeClock();
 
+            var notifier = new FakeInventoryChangeNotifier();
             var handler = new ReceiveStockCommandHandler(
                 products,
                 warehouses,
                 inventories,
-                clock);
+                clock,
+                notifier);
 
             var command = new ReceiveStockCommand(
                 product.Id,
@@ -75,6 +79,7 @@ namespace StockFlow.Application.Tests
             var result = await handler.HandleAsync(command);
 
             // Assert
+            Assert.Single(notifier.Notifications);
             Assert.Equal(1, inventories.GetCallCount);
             Assert.Equal(1, inventories.SaveCallCount);
 
@@ -124,11 +129,13 @@ namespace StockFlow.Application.Tests
             var inventories = new FakeInventoryRepository();
             inventories.Add(inventory);
 
+            var notifier = new FakeInventoryChangeNotifier();
             var handler = new ReceiveStockCommandHandler(
                 products,
                 warehouses,
                 inventories,
-                clock);
+                clock,
+                notifier);
 
             var command = new ReceiveStockCommand(
                 product.Id,
@@ -139,6 +146,7 @@ namespace StockFlow.Application.Tests
             var result = await handler.HandleAsync(command);
 
             // Assert
+            Assert.Single(notifier.Notifications);
             Assert.Equal(1, inventories.GetCallCount);
             Assert.Equal(1, inventories.SaveCallCount);
             Assert.Same(inventory, inventories.LastSavedInventory);
@@ -159,6 +167,43 @@ namespace StockFlow.Application.Tests
             Assert.Equal(clock.UtcNow, movement.OccurredAt);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task HandleAsync_WhenSaveFails_DoesNotNotify(bool conflict)
+        {
+            var setup = CreateSetup();
+            Exception failure = conflict
+                ? new InventoryConflictException(setup.Product.Id, setup.Warehouse.Id)
+                : new InvalidOperationException("Simulated save failure.");
+            setup.Inventories.SaveException = failure;
+
+            var command = new ReceiveStockCommand(
+                setup.Product.Id, setup.Warehouse.Id, 10);
+
+            var exception = await Record.ExceptionAsync(
+                () => setup.Handler.HandleAsync(command));
+
+            Assert.Same(failure, exception);
+            Assert.Equal(1, setup.Inventories.SaveCallCount);
+            Assert.Null(setup.Inventories.LastSavedInventory);
+            Assert.Empty(setup.Notifier.Notifications);
+        }
+
+        [Fact]
+        public async Task HandleAsync_WhenSuccessful_PassesTokenToNotifier()
+        {
+            var setup = CreateSetup();
+            using var cancellation = new CancellationTokenSource();
+            var command = new ReceiveStockCommand(
+                setup.Product.Id, setup.Warehouse.Id, 10);
+
+            await setup.Handler.HandleAsync(command, cancellation.Token);
+
+            Assert.Single(setup.Notifier.Notifications);
+            Assert.Equal(cancellation.Token, setup.Notifier.LastCancellationToken);
+        }
+
         [Fact]
         public async Task HandleAsync_WithNullCommand_RejectsBeforeDataAccess()
         {
@@ -171,6 +216,7 @@ namespace StockFlow.Application.Tests
             Assert.Equal(0, setup.Warehouses.GetByIdCallCount);
             Assert.Equal(0, setup.Inventories.GetCallCount);
             Assert.Equal(0, setup.Inventories.SaveCallCount);
+            Assert.Empty(setup.Notifier.Notifications);
         }
 
         [Theory]
@@ -195,6 +241,7 @@ namespace StockFlow.Application.Tests
             Assert.Equal(0, setup.Warehouses.GetByIdCallCount);
             Assert.Equal(0, setup.Inventories.GetCallCount);
             Assert.Equal(0, setup.Inventories.SaveCallCount);
+            Assert.Empty(setup.Notifier.Notifications);
         }
 
         [Theory]
@@ -215,6 +262,7 @@ namespace StockFlow.Application.Tests
             Assert.Equal(0, setup.Warehouses.GetByIdCallCount);
             Assert.Equal(0, setup.Inventories.GetCallCount);
             Assert.Equal(0, setup.Inventories.SaveCallCount);
+            Assert.Empty(setup.Notifier.Notifications);
         }
 
         [Theory]
@@ -253,6 +301,7 @@ namespace StockFlow.Application.Tests
             Assert.Equal(0, setup.Warehouses.GetByIdCallCount);
             Assert.Equal(0, setup.Inventories.GetCallCount);
             Assert.Equal(0, setup.Inventories.SaveCallCount);
+            Assert.Empty(setup.Notifier.Notifications);
         }
 
         [Theory]
@@ -291,6 +340,7 @@ namespace StockFlow.Application.Tests
             Assert.Equal(1, setup.Warehouses.GetByIdCallCount);
             Assert.Equal(0, setup.Inventories.GetCallCount);
             Assert.Equal(0, setup.Inventories.SaveCallCount);
+            Assert.Empty(setup.Notifier.Notifications);
         }
 
         [Fact]
@@ -314,6 +364,7 @@ namespace StockFlow.Application.Tests
             Assert.Equal(int.MaxValue, inventory.QuantityOnHand);
             Assert.Equal(movementsBefore, inventory.PendingMovements.ToArray());
             Assert.Equal(0, setup.Inventories.SaveCallCount);
+            Assert.Empty(setup.Notifier.Notifications);
             Assert.Null(setup.Inventories.LastSavedInventory);
         }
 
@@ -346,6 +397,7 @@ namespace StockFlow.Application.Tests
             Assert.Equal(10, inventory.QuantityOnHand);
             Assert.Equal(movementsBefore, inventory.PendingMovements.ToArray());
             Assert.Equal(0, setup.Inventories.SaveCallCount);
+            Assert.Empty(setup.Notifier.Notifications);
         }
 
         [Fact]
@@ -365,6 +417,7 @@ namespace StockFlow.Application.Tests
             Assert.Equal(0, setup.Warehouses.GetByIdCallCount);
             Assert.Equal(0, setup.Inventories.GetCallCount);
             Assert.Equal(0, setup.Inventories.SaveCallCount);
+            Assert.Empty(setup.Notifier.Notifications);
         }
     }
 }

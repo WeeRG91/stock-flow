@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.SignalR;
+using StockFlow.API.Hubs;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -27,6 +29,7 @@ namespace StockFlow.API.Tests
         public TestProductReadService ProductReader { get; } = new();
         public TestWarehouseReadService WarehouseReader { get; } = new();
         public TestInventoryReadService InventoryReader { get; } = new();
+        public TestInventoryClientProxy NotificationClient { get; } = new();
 
         public DateTimeOffset OccurredAt { get; } =
             new(2026, 10, 15, 10, 0, 0, TimeSpan.Zero);
@@ -54,6 +57,7 @@ namespace StockFlow.API.Tests
                 services.RemoveAll<IProductReadService>();
                 services.RemoveAll<IWarehouseReadService>();
                 services.RemoveAll<IInventoryReadService>();
+                services.RemoveAll<IHubContext<InventoryHub>>();
 
                 services.AddSingleton<IProductRepository>(Products);
                 services.AddSingleton<IWarehouseRepository>(Warehouses);
@@ -63,6 +67,8 @@ namespace StockFlow.API.Tests
                 services.AddSingleton<IProductReadService>(ProductReader);
                 services.AddSingleton<IWarehouseReadService>(WarehouseReader);
                 services.AddSingleton<IInventoryReadService>(InventoryReader);
+                services.AddSingleton<IHubContext<InventoryHub>>(
+                    new TestInventoryHubContext(NotificationClient));
             });
         }
 
