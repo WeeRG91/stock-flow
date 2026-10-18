@@ -44,6 +44,8 @@ namespace StockFlow.API.Tests
         {
             builder.UseEnvironment("Testing");
 
+            builder.UseSetting("BackgroundJobs:Enabled", "false");
+
             builder.UseSetting(
                 "ConnectionStrings:StockFlow",
                 "Host=localhost;Database=unused_api_test");

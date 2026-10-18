@@ -65,11 +65,25 @@ dotnet ef migrations script InitialCreate AddInventoryConcurrencyToken --project
 dotnet ef database update AddInventoryConcurrencyToken --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
 dotnet ef migrations has-pending-model-changes --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
 
+dotnet ef migrations add AddInventoryReorderThreshold --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure --output-dir Persistence/Migrations
+dotnet ef database update AddInventoryReorderThreshold --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
+dotnet ef migrations has-pending-model-changes --project src/StockFlow.Infrastructure --startup-project src/StockFlow.Infrastructure
+
 Remove-Item Env:STOCKFLOW_DEV_CONNECTION_STRING
 dotnet user-secrets init --project src/StockFlow.API
 
 add ASP.NET Core’s built-in OpenAPI document generation
 dotnet add src/StockFlow.API/StockFlow.API.csproj package Microsoft.AspNetCore.OpenApi --version 10.0.13
+
+add Hangfire.AspNetCore 1.8.25 and Hangfire.PostgreSql 1.21.1
+dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package Hangfire.AspNetCore --version 1.8.25
+dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package Hangfire.PostgreSql --version 1.21.1
+
+dotnet add src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package Newtonsoft.Json --version 13.0.4
+dotnet build StockFlow.slnx
+
+check dependencies
+dotnet list src/StockFlow.Infrastructure/StockFlow.Infrastructure.csproj package --include-transitive
 
 Seeder
 dotnet run --project src/StockFlow.API --launch-profile http -- --SeedDevelopmentData=true

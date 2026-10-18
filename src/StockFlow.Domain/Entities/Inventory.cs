@@ -12,6 +12,27 @@ namespace StockFlow.Domain.Entities
         public Guid ProductId { get; private set; }
         public Guid WarehouseId { get; private set; }
         public int QuantityOnHand { get; private set; }
+        public int? ReorderThreshold { get; private set; }
+        public bool IsLowStock =>
+            ReorderThreshold.HasValue &&
+            QuantityOnHand < ReorderThreshold.Value;
+
+        public void SetReorderThreshold(int threshold)
+        {
+            if (threshold <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(threshold),
+                    "Reorder threshold must be greater than zero.");
+            }
+
+            ReorderThreshold = threshold;
+        }
+
+        public void DisableLowStockMonitoring()
+        {
+            ReorderThreshold = null;
+        }
 
         public Inventory(Guid productId, Guid warehouseId)
         {

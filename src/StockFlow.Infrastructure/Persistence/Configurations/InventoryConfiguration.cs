@@ -14,6 +14,10 @@ namespace StockFlow.Infrastructure.Persistence.Configurations
                 table.HasCheckConstraint(
                     "CK_Inventories_QuantityOnHand_NonNegative",
                     "\"QuantityOnHand\" >= 0");
+
+                table.HasCheckConstraint(
+                    "CK_Inventories_ReorderThreshold_Positive",
+                    "\"ReorderThreshold\" IS NULL OR \"ReorderThreshold\" > 0");
             });
 
             builder.HasKey(inventory => inventory.Id);
@@ -32,6 +36,11 @@ namespace StockFlow.Infrastructure.Persistence.Configurations
 
             builder.Property(inventory => inventory.QuantityOnHand)
                 .IsRequired();
+
+            builder.Property(inventory => inventory.ReorderThreshold)
+                .IsRequired(false);
+
+            builder.Ignore(inventory => inventory.IsLowStock);
 
             builder.HasIndex(inventory => new
                 {

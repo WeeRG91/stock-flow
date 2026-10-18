@@ -8,7 +8,7 @@ namespace StockFlow.Infrastructure.Tests
     public class StockFlowDbContextModelTests
     {
         [Fact]
-        public void Model_ContainsAllFourEntities()
+        public void Model_ContainsAllFiveEntities()
         {
             // Arrange
             var options =
@@ -23,7 +23,7 @@ namespace StockFlow.Infrastructure.Tests
             var model = context.Model;
 
             // Assert
-            Assert.Equal(4, model.GetEntityTypes().Count());
+            Assert.Equal(5, model.GetEntityTypes().Count());
 
             Assert.Equal(
                 "Products",
@@ -40,6 +40,10 @@ namespace StockFlow.Infrastructure.Tests
             Assert.Equal(
                 "StockMovements",
                 model.FindEntityType(typeof(StockMovement))!.GetTableName());
+
+            Assert.Equal(
+                "LowStockAlerts",
+                model.FindEntityType(typeof(LowStockAlert))!.GetTableName());
         }
     }
 }

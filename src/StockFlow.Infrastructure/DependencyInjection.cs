@@ -3,9 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Inventory.GetInventory;
+using StockFlow.Application.Inventory.MonitorLowStock;
 using StockFlow.Application.Products.GetProducts;
 using StockFlow.Application.Warehouses.GetWarehouses;
 using StockFlow.Infrastructure.Inventory.GetInventory;
+using StockFlow.Infrastructure.Inventory.MonitorLowStock;
 using StockFlow.Infrastructure.Persistence;
 using StockFlow.Infrastructure.Persistence.Repositories;
 using StockFlow.Infrastructure.Products.GetProducts;
@@ -39,6 +41,8 @@ namespace StockFlow.Infrastructure
             services.AddScoped<IProductReadService, ProductReadService>();
             services.AddScoped<IWarehouseReadService, WarehouseReadService>();
             services.AddScoped<IInventoryReadService, InventoryReadService>();
+            services.AddScoped<IInventoryMonitoringReader, InventoryMonitoringReader>();
+            services.AddScoped<ILowStockAlertStore, LowStockAlertStore>();
 
             return services;
         }

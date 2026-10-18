@@ -33,6 +33,9 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.Property<int>("QuantityOnHand")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("ReorderThreshold")
+                        .HasColumnType("integer");
+
                     b.Property<uint>("Version")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -52,6 +55,33 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("Inventories", null, t =>
                         {
                             t.HasCheckConstraint("CK_Inventories_QuantityOnHand_NonNegative", "\"QuantityOnHand\" >= 0");
+
+                            t.HasCheckConstraint("CK_Inventories_ReorderThreshold_Positive", "\"ReorderThreshold\" IS NULL OR \"ReorderThreshold\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.LowStockAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DetectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InventoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InventoryId")
+                        .IsUnique();
+
+                    b.ToTable("LowStockAlerts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LowStockAlerts_ResolutionAfterDetection", "\"ResolvedAt\" IS NULL OR \"ResolvedAt\" >= \"DetectedAt\"");
                         });
                 });
 
@@ -161,6 +191,15 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.HasOne("StockFlow.Domain.Entities.Warehouse", null)
                         .WithMany()
                         .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.LowStockAlert", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.Inventory", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
