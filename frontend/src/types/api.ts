@@ -52,3 +52,41 @@ export interface ApiProblemDetails {
   traceId?: string;
   errors?: Record<string, string[]>;
 }
+
+export interface SupplierDto {
+  id: string;
+  code: string;
+  name: string;
+  contactEmail: string;
+  phoneNumber: string | null;
+  isActive: boolean;
+}
+
+export interface GetSuppliersResult {
+  items: SupplierDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+export interface CreateSupplierRequest {
+  code: string;
+  name: string;
+  contactEmail: string;
+  phoneNumber: string | null;
+}
+
+export interface CreateSupplierResult {
+  supplierId: string;
+  code: string;
+  name: string;
+  contactEmail: string;
+  phoneNumber: string | null;
+  isActive: boolean;
+}
+
+export interface UpdateSupplierRequest {
+  name: string;
+  contactEmail: string;
+  phoneNumber: string | null;
+}

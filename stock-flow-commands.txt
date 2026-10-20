@@ -103,3 +103,22 @@ npm.cmd run build
 npm.cmd run lint
 
 npm.cmd install react-hook-form zod @hookform/resolvers
+
+PS C:\Sites\stock-flow> $body = @{
+>>     name = "[DEMO] Brussels Office Supplies Updated"
+>>     contactEmail = "office@example.com"
+>>     phoneNumber = "+32 000 00 02"
+>> } | ConvertTo-Json
+PS C:\Sites\stock-flow> Invoke-RestMethod `
+>>     -Uri "http://localhost:5290/api/suppliers/051a1f32-db53-483c-9402-2eb2d6d04665" `
+>>     -Method Put `
+>>     -ContentType "application/json" `
+>>     -Body $body
+
+
+id           : 051a1f32-db53-483c-9402-2eb2d6d04665
+code         : DEMO-OFFICE
+name         : [DEMO] Brussels Office Supplies Updated
+contactEmail : office@example.com
+phoneNumber  : +32 000 00 02
+isActive     : True

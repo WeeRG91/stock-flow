@@ -10,6 +10,7 @@ using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Products.GetProducts;
+using StockFlow.Application.Suppliers;
 using StockFlow.Application.Warehouses.GetWarehouses;
 using StockFlow.Domain.Entities;
 
@@ -26,9 +27,11 @@ namespace StockFlow.API.Tests
         public TestProductRepository Products { get; } = new();
         public TestWarehouseRepository Warehouses { get; } = new();
         public TestInventoryRepository Inventories { get; } = new();
+        public TestSupplierRepository Suppliers { get; } = new();
         public TestProductReadService ProductReader { get; } = new();
         public TestWarehouseReadService WarehouseReader { get; } = new();
         public TestInventoryReadService InventoryReader { get; } = new();
+        public TestSupplierReadService SupplierReader { get; } = new();
         public TestInventoryClientProxy NotificationClient { get; } = new();
 
         public DateTimeOffset OccurredAt { get; } =
@@ -55,20 +58,24 @@ namespace StockFlow.API.Tests
                 services.RemoveAll<IProductRepository>();
                 services.RemoveAll<IWarehouseRepository>();
                 services.RemoveAll<IInventoryRepository>();
+                services.RemoveAll<ISupplierRepository>();
                 services.RemoveAll<IClock>();
                 services.RemoveAll<IProductReadService>();
                 services.RemoveAll<IWarehouseReadService>();
                 services.RemoveAll<IInventoryReadService>();
+                services.RemoveAll<ISupplierReadService>();
                 services.RemoveAll<IHubContext<InventoryHub>>();
 
                 services.AddSingleton<IProductRepository>(Products);
                 services.AddSingleton<IWarehouseRepository>(Warehouses);
                 services.AddSingleton<IInventoryRepository>(Inventories);
+                services.AddSingleton<ISupplierRepository>(Suppliers);
                 services.AddSingleton<IClock>(
                     new FixedClock(OccurredAt));
                 services.AddSingleton<IProductReadService>(ProductReader);
                 services.AddSingleton<IWarehouseReadService>(WarehouseReader);
                 services.AddSingleton<IInventoryReadService>(InventoryReader);
+                services.AddSingleton<ISupplierReadService>(SupplierReader);
                 services.AddSingleton<IHubContext<InventoryHub>>(
                     new TestInventoryHubContext(NotificationClient));
             });

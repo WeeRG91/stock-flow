@@ -60,7 +60,12 @@ namespace StockFlow.API.Errors
                     "Business rule violation",
                     businessRule.Message),
 
-                _=> (
+                SupplierCodeConflictException supplierConflict => (
+                    StatusCodes.Status409Conflict,
+                    "Supplier code conflict",
+                    supplierConflict.Message),
+
+                _ => (
                     StatusCodes.Status500InternalServerError,
                     "Internal server error",
                     "An unexpected error occurred.")

@@ -12,6 +12,12 @@ using StockFlow.Infrastructure.Development;
 using StockFlow.Infrastructure.Persistence;
 using Hangfire;
 using StockFlow.Application.Inventory.MonitorLowStock;
+using StockFlow.Application.Suppliers.CreateSupplier;
+using StockFlow.Application.Suppliers.GetSuppliers;
+using StockFlow.Application.Suppliers.GetSupplierById;
+using StockFlow.Application.Suppliers.UpdateSupplier;
+using StockFlow.Application.Suppliers.ActivateSupplier;
+using StockFlow.Application.Suppliers.DeactivateSupplier;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +33,12 @@ builder.Services.AddScoped<GetWarehousesQueryHandler>();
 builder.Services.AddScoped<GetInventoryQueryHandler>();
 builder.Services.AddScoped<GetLowStockInventoriesQueryHandler>();
 builder.Services.AddScoped<MonitorLowStockCommandHandler>();
+builder.Services.AddScoped<CreateSupplierCommandHandler>();
+builder.Services.AddScoped<GetSuppliersQueryHandler>();
+builder.Services.AddScoped<GetSupplierByIdQueryHandler>();
+builder.Services.AddScoped<UpdateSupplierCommandHandler>();
+builder.Services.AddScoped<ActivateSupplierCommandHandler>();
+builder.Services.AddScoped<DeactivateSupplierCommandHandler>();
 
 builder.Services.AddScoped<IInventoryChangeNotifier, SignalRInventoryChangeNotifier>();
 

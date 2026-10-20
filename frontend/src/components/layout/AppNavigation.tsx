@@ -5,6 +5,7 @@ const navigationItems = [
   { to: "/inventory", label: "Inventory" },
   { to: "/products", label: "Products" },
   { to: "/warehouses", label: "Warehouses" },
+  { to: "/suppliers", label: "Suppliers" },
 ];
 
 export function AppNavigation() {

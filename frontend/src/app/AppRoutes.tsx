@@ -4,6 +4,8 @@ import { InventoryPage } from "../features/inventory/InventoryPage";
 import { ProductsPage } from "../features/products/ProductsPage";
 import { WarehousesPage } from "../features/warehouses/WarehousesPage";
 import { NotFoundPage } from "./NotFoundPage";
+import { SuppliersPage } from "@/features/suppliers/SuppliersPage";
+import { SupplierDetailsPage } from "@/features/suppliers/SupplierDetailsPage";
 
 export function AppRoutes() {
   return (
@@ -12,6 +14,8 @@ export function AppRoutes() {
       <Route path="/inventory" element={<InventoryPage />} />
       <Route path="/products" element={<ProductsPage />} />
       <Route path="/warehouses" element={<WarehousesPage />} />
+      <Route path="/suppliers" element={<SuppliersPage />} />
+      <Route path="/suppliers/:id" element={<SupplierDetailsPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

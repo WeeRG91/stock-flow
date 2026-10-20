@@ -149,6 +149,42 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.Supplier", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Suppliers_Code");
+
+                    b.ToTable("Suppliers", (string)null);
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.Warehouse", b =>
                 {
                     b.Property<Guid>("Id")
