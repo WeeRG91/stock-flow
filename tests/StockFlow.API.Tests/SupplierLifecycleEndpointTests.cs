@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using StockFlow.Application.Suppliers;
@@ -30,7 +30,7 @@ public class SupplierLifecycleEndpointTests
             supplier.Deactivate();
 
         factory.Suppliers.Add(supplier);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         for (var attempt = 0; attempt < 2; attempt++)
         {
@@ -64,7 +64,7 @@ public class SupplierLifecycleEndpointTests
     public async Task Patch_WhenMissing_ReturnsNotFound(bool activate)
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.PatchAsync(
             Endpoint(Guid.NewGuid(), activate), null);
@@ -84,7 +84,7 @@ public class SupplierLifecycleEndpointTests
     public async Task Patch_WithEmptyId_ReturnsBadRequest(bool activate)
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.PatchAsync(
             Endpoint(Guid.Empty, activate), null);
@@ -104,7 +104,7 @@ public class SupplierLifecycleEndpointTests
     public async Task Patch_WithMalformedId_DoesNotMatchRoute(string action)
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.PatchAsync(
             $"/api/suppliers/not-a-guid/{action}", null);
@@ -136,7 +136,7 @@ public class SupplierLifecycleEndpointTests
         else
             factory.Suppliers.LookupException = failure;
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PatchAsync(
             Endpoint(supplier.Id, activate), null);
 

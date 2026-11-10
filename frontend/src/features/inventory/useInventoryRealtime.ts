@@ -83,10 +83,13 @@ export function useInventoryRealtime() {
       scheduleStart();
     });
 
-    void start();
+    const initialStartTimer = setTimeout(() => {
+      void start();
+    }, 0);
 
     return () => {
       disposed = true;
+      clearTimeout(initialStartTimer);
       clearTimeout(retryTimer);
       connection.off("InventoryChanged", refreshInventory);
 

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using StockFlow.Application.Suppliers;
@@ -20,7 +20,7 @@ public class GetSupplierByIdEndpointTests
             "office@example.com", null, isActive);
 
         factory.SupplierReader.SupplierByIdResult = supplier;
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.GetAsync(
             $"/api/suppliers/{supplier.Id}");
@@ -39,7 +39,7 @@ public class GetSupplierByIdEndpointTests
     public async Task GetById_WhenMissing_ReturnsNotFoundProblem()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         var id = Guid.NewGuid();
 
         using var response = await client.GetAsync($"/api/suppliers/{id}");
@@ -56,7 +56,7 @@ public class GetSupplierByIdEndpointTests
     public async Task GetById_WithEmptyId_ReturnsValidationProblem()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.GetAsync(
             $"/api/suppliers/{Guid.Empty}");
@@ -73,7 +73,7 @@ public class GetSupplierByIdEndpointTests
     public async Task GetById_WithMalformedId_DoesNotMatchRoute()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.GetAsync(
             "/api/suppliers/not-a-guid");
@@ -91,7 +91,7 @@ public class GetSupplierByIdEndpointTests
         factory.SupplierReader.ReadException =
             new InvalidOperationException(sensitiveDetail);
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.GetAsync(
             $"/api/suppliers/{Guid.NewGuid()}");
@@ -109,7 +109,7 @@ public class GetSupplierByIdEndpointTests
     public async Task Create_ReturnsLocationPointingToDetailsRoute()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.PostAsJsonAsync(
             "/api/suppliers",

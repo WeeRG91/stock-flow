@@ -9,11 +9,21 @@ Codes are unique across active and inactive suppliers.
 Deactivation preserves the supplier record and contact details.
 Permanent deletion is not supported.
 
-## Local development security
+## Security
 
-Authentication and authorization are not implemented.
-Supplier mutation endpoints are currently unprotected and intended
-for local development only.
+Supplier reads require the Suppliers.Read policy.
+Creation, contact updates, activation, and deactivation require
+the Suppliers.Manage policy.
+
+Administrator, Purchasing Officer, and Purchasing Manager roles
+can manage suppliers. All six configured business roles can read them.
+
+State-changing requests require a valid antiforgery token.
+React hides mutation controls according to server-provided capabilities.
+API authorization enforces access independently of the interface.
+
+Accounts are explicitly provisioned for local development.
+Public self-registration and deployment are outside the current scope.
 
 ## Verification
 

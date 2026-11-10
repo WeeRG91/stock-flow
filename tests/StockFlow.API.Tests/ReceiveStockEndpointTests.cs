@@ -51,7 +51,7 @@ namespace StockFlow.API.Tests
         public async Task Receive_WithValidRequest_ReturnsBalance()
         {
             using var factory = new StockFlowApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
 
             using var response = await client.PostAsJsonAsync(
                 Endpoint,
@@ -89,7 +89,7 @@ namespace StockFlow.API.Tests
             factory.NotificationClient.SendException = cancelled
                 ? new OperationCanceledException("Simulated notification cancellation.")
                 : new InvalidOperationException("Simulated notification failure.");
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
             using var response = await client.PostAsJsonAsync(Endpoint, ValidRequest(factory));
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var result = await response.Content.ReadFromJsonAsync<ReceiveStockResult>();
@@ -119,7 +119,7 @@ namespace StockFlow.API.Tests
             string invalidValue)
         {
             using var factory = new StockFlowApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
 
             var request = ValidRequest(factory);
 
@@ -167,7 +167,7 @@ namespace StockFlow.API.Tests
         public async Task Receive_WithMalformedJson_ReturnsBadRequest()
         {
             using var factory = new StockFlowApiFactory();
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
             using var content = new StringContent(
                 "{",
                 Encoding.UTF8,
@@ -199,7 +199,7 @@ namespace StockFlow.API.Tests
                 factory.Warehouses.Warehouse = null;
             }
 
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
 
             using var response = await client.PostAsJsonAsync(
                 Endpoint,
@@ -229,7 +229,7 @@ namespace StockFlow.API.Tests
                 factory.Warehouse.Deactivate();
             }
 
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
 
             using var response = await client.PostAsJsonAsync(
                 Endpoint,
@@ -257,7 +257,7 @@ namespace StockFlow.API.Tests
                     factory.Product.Id,
                     factory.Warehouse.Id);
 
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
 
             using var response = await client.PostAsJsonAsync(
                 Endpoint,
@@ -286,7 +286,7 @@ namespace StockFlow.API.Tests
             factory.Inventories.SaveException =
                 new InvalidOperationException(internalMessage);
 
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
 
             using var response = await client.PostAsJsonAsync(
                 Endpoint,
@@ -325,7 +325,7 @@ namespace StockFlow.API.Tests
             var movementsBefore = inventory.PendingMovements.ToArray();
             factory.Inventories.Inventory = inventory;
 
-            using var client = factory.CreateClient();
+            using var client = await factory.CreateClientWithAntiforgeryAsync();
 
             var request = ValidRequest(factory);
             request["quantity"] = 1;

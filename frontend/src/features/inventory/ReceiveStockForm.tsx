@@ -17,8 +17,9 @@ interface ReceiveStockFormProps {
 }
 
 const selectClassName =
-  "h-10 w-full rounded-lg border border-input bg-background px-3 text-sm " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  "h-11 w-full min-w-0 rounded-lg border border-input bg-card px-3 text-sm shadow-sm " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
+  "aria-invalid:border-destructive disabled:cursor-not-allowed disabled:opacity-50";
 
 export function ReceiveStockForm({
   products,
@@ -81,17 +82,22 @@ export function ReceiveStockForm({
   return (
     <form
       aria-labelledby="receive-stock-heading"
-      className="space-y-4 rounded-xl border bg-card p-6"
+      className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm"
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
-      <h2 id="receive-stock-heading" className="text-lg font-semibold">
-        Receive stock
-      </h2>
+      <div className="space-y-1">
+        <h2 id="receive-stock-heading" className="text-base font-semibold">
+          Receive stock
+        </h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Record incoming units for a product at the selected warehouse.
+        </p>
+      </div>
 
       <fieldset
         disabled={mutation.isPending}
-        className="grid min-w-0 gap-4 sm:grid-cols-2"
+        className="grid min-w-0 items-start gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]"
       >
         <div className="space-y-2">
           <Label htmlFor="receive-product">Product</Label>
@@ -156,6 +162,7 @@ export function ReceiveStockForm({
             min={1}
             max={2_147_483_647}
             step={1}
+            className="h-11 bg-card"
             aria-invalid={Boolean(errors.quantity)}
             aria-describedby={
               errors.quantity ? "receive-quantity-error" : undefined
@@ -172,6 +179,7 @@ export function ReceiveStockForm({
 
       <Button
         type="submit"
+        className="min-h-11 w-full sm:w-auto"
         disabled={
           mutation.isPending ||
           activeProducts.length === 0 ||
@@ -182,14 +190,20 @@ export function ReceiveStockForm({
       </Button>
 
       {mutation.isSuccess && (
-        <p role="status" className="text-sm">
+        <p
+          role="status"
+          className="rounded-lg border border-primary/20 bg-accent px-4 py-3 text-sm text-accent-foreground"
+        >
           Stock received successfully. Quantity on hand:{" "}
           {mutation.data.quantityOnHand}.
         </p>
       )}
 
       {mutation.isError && (
-        <div role="alert" className="space-y-1 text-sm text-destructive">
+        <div
+          role="alert"
+          className="space-y-2 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
           <p>
             {mutation.error instanceof ApiError
               ? mutation.error.message

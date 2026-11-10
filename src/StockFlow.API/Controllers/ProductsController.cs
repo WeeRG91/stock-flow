@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using StockFlow.Application.Authorization;
 using StockFlow.Application.Products.GetProducts;
 
 namespace StockFlow.API.Controllers
@@ -15,6 +17,7 @@ namespace StockFlow.API.Controllers
             _handler = handler;
         }
 
+        [Authorize(Policy = StockFlowPolicies.CatalogRead)]
         [HttpGet]
         [ProducesResponseType(
             typeof(IReadOnlyList<ProductDto>),

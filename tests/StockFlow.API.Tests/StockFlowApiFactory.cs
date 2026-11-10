@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.SignalR;
 using StockFlow.API.Hubs;
 using Microsoft.AspNetCore.TestHost;
@@ -34,6 +35,9 @@ namespace StockFlow.API.Tests
         public TestSupplierReadService SupplierReader { get; } = new();
         public TestInventoryClientProxy NotificationClient { get; } = new();
 
+        public TestUserIdentity User { get; } = new();
+        public bool UseTestAuthentication { get; set; } = true;
+
         public DateTimeOffset OccurredAt { get; } =
             new(2026, 10, 15, 10, 0, 0, TimeSpan.Zero);
 
@@ -55,6 +59,21 @@ namespace StockFlow.API.Tests
 
             builder.ConfigureTestServices(services =>
             {
+                if (UseTestAuthentication)
+                {
+                    services.AddSingleton<TestUserIdentity>(User);
+
+                    services
+                        .AddAuthentication(options =>
+                        {
+                            options.DefaultAuthenticateScheme =
+                                TestAuthenticationHandler.SchemeName;
+                        })
+                        .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                            TestAuthenticationHandler.SchemeName,
+                            _ => { });
+                }
+
                 services.RemoveAll<IProductRepository>();
                 services.RemoveAll<IWarehouseRepository>();
                 services.RemoveAll<IInventoryRepository>();

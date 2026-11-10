@@ -1,27 +1,37 @@
+using Hangfire;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using StockFlow.API.Antiforgery;
+using StockFlow.API.Authorization;
 using StockFlow.API.Errors;
 using StockFlow.API.Hubs;
 using StockFlow.API.Notifications;
+using StockFlow.API.RateLimiting;
 using StockFlow.Application.Abstractions.Notifications;
+using StockFlow.Application.Authorization;
 using StockFlow.Application.Inventory.GetInventory;
+using StockFlow.Application.Inventory.MonitorLowStock;
 using StockFlow.Application.Inventory.ReceiveStock;
 using StockFlow.Application.Products.GetProducts;
+using StockFlow.Application.Suppliers.ActivateSupplier;
+using StockFlow.Application.Suppliers.CreateSupplier;
+using StockFlow.Application.Suppliers.DeactivateSupplier;
+using StockFlow.Application.Suppliers.GetSupplierById;
+using StockFlow.Application.Suppliers.GetSuppliers;
+using StockFlow.Application.Suppliers.UpdateSupplier;
 using StockFlow.Application.Warehouses.GetWarehouses;
 using StockFlow.Infrastructure;
 using StockFlow.Infrastructure.BackgroundJobs;
 using StockFlow.Infrastructure.Development;
+using StockFlow.Infrastructure.Identity;
 using StockFlow.Infrastructure.Persistence;
-using Hangfire;
-using StockFlow.Application.Inventory.MonitorLowStock;
-using StockFlow.Application.Suppliers.CreateSupplier;
-using StockFlow.Application.Suppliers.GetSuppliers;
-using StockFlow.Application.Suppliers.GetSupplierById;
-using StockFlow.Application.Suppliers.UpdateSupplier;
-using StockFlow.Application.Suppliers.ActivateSupplier;
-using StockFlow.Application.Suppliers.DeactivateSupplier;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+});
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -51,15 +61,29 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddStockFlowAuthentication();
+builder.Services.AddStockFlowAuthorization();
+builder.Services.AddStockFlowAntiforgery();
+builder.Services.AddStockFlowRateLimiting();
 
 var configureDemoMonitoring =
     builder.Configuration.GetValue<bool>("ConfigureDemoMonitoring");
+
+var provisionDevelopmentIdentity = builder.Configuration.GetValue<bool>("ProvisionDevelopmentIdentity");
+
+if (provisionDevelopmentIdentity &&
+    !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        "Development identity provisioning requires Development.");
+}
 
 var runBackgroundJobs =
     builder.Environment.IsDevelopment() &&
     builder.Configuration.GetValue<bool>("BackgroundJobs:Enabled", true) &&
     !builder.Configuration.GetValue<bool>("SeedDevelopmentData") &&
-    !configureDemoMonitoring;
+    !configureDemoMonitoring &&
+    !provisionDevelopmentIdentity;
 
 if (runBackgroundJobs)
 {
@@ -72,6 +96,35 @@ if (runBackgroundJobs)
 }
 
 var app = builder.Build();
+
+if (provisionDevelopmentIdentity)
+{
+    var password = builder.Configuration["DevelopmentIdentity:Password"];
+
+    if (string.IsNullOrWhiteSpace(password))
+    {
+        throw new InvalidOperationException(
+            "Configure DevelopmentIdentity:Password before provisioning.");
+    }
+
+    await using (var scope = app.Services.CreateAsyncScope())
+    {
+        var roles = scope.ServiceProvider
+            .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+        var users = scope.ServiceProvider
+            .GetRequiredService<UserManager<ApplicationUser>>();
+
+        await DevelopmentIdentitySeeder.SeedRolesAsync(roles);
+        await DevelopmentIdentitySeeder.SeedUsersAsync(users, password);
+    }
+
+    app.Logger.LogInformation(
+        "Development identity provisioning completed.");
+
+    await app.DisposeAsync();
+    return;
+}
 
 if (builder.Configuration.GetValue<bool>("SeedDevelopmentData"))
 {
@@ -126,10 +179,15 @@ if (configureDemoMonitoring)
 }
 
 app.UseExceptionHandler();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
 
 if (runBackgroundJobs)
 {
-    app.MapHangfireDashboard("/hangfire");
+    app.MapHangfireDashboard("/hangfire")
+        .RequireAuthorization(StockFlowPolicies.BackgroundJobsManage);
 
     var recurringJobs = app.Services
         .GetRequiredService<IRecurringJobManager>();
@@ -144,7 +202,13 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 
-app.MapHub<InventoryHub>("/hubs/inventory");
+app.MapHub<InventoryHub>(
+    "/hubs/inventory",
+    options =>
+    {
+        options.CloseOnAuthenticationExpiration = true;
+    })
+    .RequireAuthorization(StockFlowPolicies.InventoryRead);
 
 if (builder.Configuration.GetValue<bool>("RunDemoJob"))
 {

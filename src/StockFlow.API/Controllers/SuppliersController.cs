@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using StockFlow.API.Contracts.Suppliers;
+using StockFlow.Application.Authorization;
 using StockFlow.Application.Suppliers;
 using StockFlow.Application.Suppliers.ActivateSupplier;
 using StockFlow.Application.Suppliers.CreateSupplier;
@@ -44,6 +46,7 @@ namespace StockFlow.API.Controllers
             _deactivateHandler = deactivateHandler;
         }
 
+        [Authorize(Policy = StockFlowPolicies.SuppliersRead)]
         [HttpGet]
         [ProducesResponseType(
             typeof(GetSuppliersResult),
@@ -71,6 +74,7 @@ namespace StockFlow.API.Controllers
             return Ok(result);
         }
 
+        [Authorize(Policy = StockFlowPolicies.SuppliersRead)]
         [HttpGet("{id:guid}")]
         [ProducesResponseType(
             typeof(SupplierDto),
@@ -95,6 +99,7 @@ namespace StockFlow.API.Controllers
             return Ok(result);
         }
 
+        [Authorize(Policy = StockFlowPolicies.SuppliersManage)]
         [HttpPost]
         [ProducesResponseType(
             typeof(CreateSupplierResult),
@@ -128,6 +133,7 @@ namespace StockFlow.API.Controllers
                 result);
         }
 
+        [Authorize(Policy = StockFlowPolicies.SuppliersManage)]
         [HttpPut("{id:guid}")]
         [ProducesResponseType(
             typeof(SupplierDto),
@@ -159,6 +165,7 @@ namespace StockFlow.API.Controllers
             return Ok(result);
         }
 
+        [Authorize(Policy = StockFlowPolicies.SuppliersManage)]
         [HttpPatch("{id:guid}/activate")]
         [ProducesResponseType(
             typeof(SupplierDto),
@@ -183,6 +190,7 @@ namespace StockFlow.API.Controllers
             return Ok(result);
         }
 
+        [Authorize(Policy = StockFlowPolicies.SuppliersManage)]
         [HttpPatch("{id:guid}/deactivate")]
         [ProducesResponseType(
             typeof(SupplierDto),

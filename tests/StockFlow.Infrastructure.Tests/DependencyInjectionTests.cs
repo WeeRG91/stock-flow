@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using StockFlow.Application.Abstractions.Persistence;
+using Microsoft.AspNetCore.Identity;
 using StockFlow.Infrastructure.Persistence;
 using StockFlow.Infrastructure.Persistence.Repositories;
 
@@ -12,6 +13,8 @@ namespace StockFlow.Infrastructure.Tests
         {
             // Arrange
             var services = new ServiceCollection();
+
+            services.AddAuthentication().AddIdentityCookies();
 
             services.AddInfrastructure(
                 "Host=localhost;Database=stockflow_di_test");

@@ -96,28 +96,34 @@ export function CreateSupplierForm() {
   return (
     <form
       aria-labelledby="create-supplier-heading"
-      className="space-y-4 rounded-xl border bg-card p-6"
+      className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm"
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
-      <h2 id="create-supplier-heading" className="text-lg font-semibold">
-        Create supplier
-      </h2>
+      <div className="space-y-1">
+        <h2 id="create-supplier-heading" className="text-base font-semibold">
+          Create supplier
+        </h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Add a supplier and their primary contact information.
+        </p>
+      </div>
 
       <fieldset
         disabled={mutation.isPending}
-        className="grid min-w-0 gap-4 sm:grid-cols-2"
+        className="grid min-w-0 items-start gap-5 sm:grid-cols-2"
       >
         {fields.map((field) => {
           const id = `create-supplier-${field.name}`;
           const error = errors[field.name];
 
           return (
-            <div key={field.name} className="space-y-2">
+            <div key={field.name} className="min-w-0 space-y-2">
               <Label htmlFor={id}>{field.label}</Label>
               <Input
                 id={id}
                 type={field.type}
+                className="h-11 bg-card"
                 aria-invalid={Boolean(error)}
                 aria-describedby={error ? `${id}-error` : undefined}
                 {...register(field.name)}
@@ -133,18 +139,22 @@ export function CreateSupplierForm() {
         })}
       </fieldset>
 
-      <Button type="submit" disabled={mutation.isPending}>
+      <Button
+        type="submit"
+        className="min-h-11 w-full sm:w-auto"
+        disabled={mutation.isPending}
+      >
         {mutation.isPending ? "Creating supplier…" : "Create supplier"}
       </Button>
 
       {mutation.isSuccess && (
-        <p role="status" className="text-sm">
+        <p role="status" className="rounded-lg border border-primary/20 bg-accent px-4 py-3 text-sm text-accent-foreground">
           Supplier {mutation.data.code} created successfully.
         </p>
       )}
 
       {mutation.isError && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           {mutation.error instanceof ApiError
             ? mutation.error.message
             : "Couldn't confirm creation. Check the supplier list before submitting again."}

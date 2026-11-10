@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using StockFlow.API.Contracts.Inventory;
+using StockFlow.Application.Authorization;
 using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Inventory.ReceiveStock;
 
@@ -23,6 +25,7 @@ namespace StockFlow.API.Controllers
             _queryHandler = queryHandler;
         }
 
+        [Authorize(Policy = StockFlowPolicies.InventoryRead)]
         [HttpGet]
         [ProducesResponseType(
             typeof(GetInventoryResult),
@@ -46,6 +49,7 @@ namespace StockFlow.API.Controllers
             return Ok(result);
         }
 
+        [Authorize(Policy = StockFlowPolicies.InventoryReceive)]
         [HttpPost("receive")]
         [ProducesResponseType(
             typeof(ReceiveStockResult),

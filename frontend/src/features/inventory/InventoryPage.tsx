@@ -8,6 +8,8 @@ import { useWarehouses } from "../warehouses/useWarehouses";
 import { useProducts } from "../products/useProducts";
 import { ReceiveStockForm } from "./ReceiveStockForm";
 import { useInventoryRealtime } from "./useInventoryRealtime";
+import { FeedbackPanel } from "@/components/FeedbackPanel";
+import { usePermissions } from "../auth/usePermissions";
 
 const pageSize = 20;
 
@@ -18,6 +20,8 @@ export function InventoryPage() {
   const productsQuery = useProducts();
   const warehousesQuery = useWarehouses();
   const connectionStatus = useInventoryRealtime();
+  const { can } = usePermissions();
+  const canReceiveStock = can("Inventory.Receive");
 
   const hasNextPage =
     query.data !== undefined &&
@@ -28,79 +32,119 @@ export function InventoryPage() {
       <PageHeader
         title="Inventory"
         description="Review stock balances across NovaTrade's warehouses."
+        actions={
+          <span
+            role="status"
+            className={[
+              "inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium",
+              connectionStatus === "connected"
+                ? "border-primary/20 bg-accent text-accent-foreground"
+                : "border-border bg-card text-muted-foreground",
+            ].join(" ")}
+          >
+            <span
+              aria-hidden="true"
+              className="size-2 shrink-0 rounded-full bg-current"
+            />
+
+            {connectionStatus === "connected"
+              ? "Live updates connected"
+              : connectionStatus === "connecting"
+                ? "Connecting to live updates…"
+                : connectionStatus === "reconnecting"
+                  ? "Reconnecting to live updates…"
+                  : "Disconnected · retrying automatically…"}
+          </span>
+        }
       />
 
-      <p role="status" className="text-sm text-muted-foreground">
-        {connectionStatus === "connected"
-          ? "Live inventory updates connected."
-          : connectionStatus === "connecting"
-            ? "Connecting to live inventory updates…"
-            : connectionStatus === "reconnecting"
-              ? "Reconnecting to live inventory updates…"
-              : "Live updates are disconnected. Retrying automatically…"}
-      </p>
+      {canReceiveStock && (
+        <>
+          {productsQuery.isPending || warehousesQuery.isPending ? (
+            <FeedbackPanel title="Preparing stock receipt" role="status">
+              <p>Loading products and warehouse options…</p>
+            </FeedbackPanel>
+          ) : productsQuery.isError || warehousesQuery.isError ? (
+            <FeedbackPanel title="Stock receipt unavailable" role="alert">
+              <p>Couldn't load products or warehouses for stock receipt.</p>
 
-      {productsQuery.isPending || warehousesQuery.isPending ? (
-        <p role="status">Loading stock receipt options…</p>
-      ) : productsQuery.isError || warehousesQuery.isError ? (
-        <div role="alert" className="space-y-3">
-          <p>Couldn't load products or warehouses for stock receipt.</p>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={productsQuery.isFetching || warehousesQuery.isFetching}
-            onClick={() => {
-              void productsQuery.refetch();
-              void warehousesQuery.refetch();
-            }}
-          >
-            Retry loading options
-          </Button>
-        </div>
-      ) : !productsQuery.data.some((product) => product.isActive) ||
-        !warehousesQuery.data.some((warehouse) => warehouse.isActive) ? (
-        <p>
-          Stock receipt requires at least one active product and one active
-          warehouse.
-        </p>
-      ) : (
-        <ReceiveStockForm
-          products={productsQuery.data}
-          warehouses={warehousesQuery.data}
-        />
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                disabled={
+                  productsQuery.isFetching || warehousesQuery.isFetching
+                }
+                onClick={() => {
+                  void productsQuery.refetch();
+                  void warehousesQuery.refetch();
+                }}
+              >
+                Retry loading options
+              </Button>
+            </FeedbackPanel>
+          ) : !productsQuery.data.some((product) => product.isActive) ||
+            !warehousesQuery.data.some((warehouse) => warehouse.isActive) ? (
+            <FeedbackPanel title="Stock receipt needs active catalog entries">
+              <p>
+                Stock receipt requires at least one active product and one
+                active warehouse.
+              </p>
+            </FeedbackPanel>
+          ) : (
+            <ReceiveStockForm
+              products={productsQuery.data}
+              warehouses={warehousesQuery.data}
+            />
+          )}
+        </>
       )}
 
       {query.isPending ? (
-        <p role="status">Loading inventory…</p>
+        <FeedbackPanel title="Loading inventory" role="status">
+          <p>Fetching current stock balances…</p>
+        </FeedbackPanel>
       ) : query.isError ? (
-        <div role="alert" className="space-y-3">
+        <FeedbackPanel title="Couldn't load inventory" role="alert">
           <p>
             {query.error instanceof ApiError
               ? query.error.message
               : "Couldn't load inventory. Check your connection and try again."}
           </p>
+
           <Button
             type="button"
             variant="outline"
+            className="min-h-11"
             disabled={query.isFetching}
             onClick={() => void query.refetch()}
           >
             Try again
           </Button>
-        </div>
+        </FeedbackPanel>
       ) : query.data.items.length === 0 ? (
-        <p>
-          {query.data.totalCount === 0
-            ? "No inventory balances exist yet. Receive stock to create one."
-            : "No balances are available on this page. Go back to an earlier page."}
-        </p>
+        <FeedbackPanel
+          title={
+            query.data.totalCount === 0
+              ? "No inventory balances yet"
+              : "No balances on this page"
+          }
+        >
+          <p>
+            {query.data.totalCount === 0
+              ? canReceiveStock
+                ? "Receive stock to create the first inventory balance."
+                : "No inventory balances are available yet."
+              : "Go back to an earlier page to view available balances."}
+          </p>
+        </FeedbackPanel>
       ) : (
         <InventoryTable items={query.data.items} />
       )}
 
       <nav
         aria-label="Inventory pagination"
-        className="flex flex-wrap items-center justify-between gap-3"
+        className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4 shadow-sm"
       >
         <p className="text-sm text-muted-foreground" aria-live="polite">
           Page {pageNumber}
@@ -111,6 +155,7 @@ export function InventoryPage() {
           <Button
             type="button"
             variant="outline"
+            className="min-h-11"
             disabled={pageNumber === 1 || query.isFetching}
             onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
           >
@@ -120,6 +165,7 @@ export function InventoryPage() {
           <Button
             type="button"
             variant="outline"
+            className="min-h-11"
             disabled={!query.isSuccess || !hasNextPage || query.isFetching}
             onClick={() => setPageNumber((page) => page + 1)}
           >

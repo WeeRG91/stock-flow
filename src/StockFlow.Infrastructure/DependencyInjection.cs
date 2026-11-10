@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using StockFlow.Application.Abstractions.Authentication;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Inventory.GetInventory;
@@ -7,6 +9,7 @@ using StockFlow.Application.Inventory.MonitorLowStock;
 using StockFlow.Application.Products.GetProducts;
 using StockFlow.Application.Suppliers;
 using StockFlow.Application.Warehouses.GetWarehouses;
+using StockFlow.Infrastructure.Identity;
 using StockFlow.Infrastructure.Inventory.GetInventory;
 using StockFlow.Infrastructure.Inventory.MonitorLowStock;
 using StockFlow.Infrastructure.Persistence;
@@ -35,6 +38,31 @@ namespace StockFlow.Infrastructure
 
             services.AddDbContext<StockFlowDbContext>(options =>
                 options.UseNpgsql(connectionString));
+            services.AddDbContext<StockFlowIdentityDbContext>(options =>
+                options.UseNpgsql(
+                    connectionString,
+                    postgres => postgres.MigrationsHistoryTable(
+                        "__EFMigrationsHistory",
+                        "identity")));
+
+            services.AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+
+                options.Password.RequiredLength = 15;
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
+            .AddRoles<IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<StockFlowIdentityDbContext>()
+            .AddSignInManager();
+            services.AddScoped<IAccountService, IdentityAccountService>();
 
             services.AddScoped<IInventoryRepository, InventoryRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();

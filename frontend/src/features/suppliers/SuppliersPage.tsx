@@ -7,6 +7,8 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CreateSupplierForm } from "./CreateSupplierForm";
+import { FeedbackPanel } from "@/components/FeedbackPanel";
+import { usePermissions } from "../auth/usePermissions";
 
 export function SuppliersPage() {
   const [searchInput, setSearchInput] = useState<string>("");
@@ -22,6 +24,9 @@ export function SuppliersPage() {
     isActive: status === "all" ? undefined : status === "active",
   });
 
+  const { can } = usePermissions();
+  const canManageSuppliers = can("Suppliers.Manage");
+
   const totalPages = query.data
     ? Math.max(1, Math.ceil(query.data.totalCount / pageSize))
     : 1;
@@ -33,28 +38,29 @@ export function SuppliersPage() {
         description="Manage NovaTrade's suppliers and contact information."
       />
 
-      <CreateSupplierForm />
+      {canManageSuppliers && <CreateSupplierForm />}
 
       <form
-        className="flex flex-col gap-3 sm:flex-row sm:items-end"
+        className="grid gap-5 rounded-xl border border-border bg-card p-6 shadow-sm sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_10rem_9rem_auto] xl:items-end"
         onSubmit={(event) => {
           event.preventDefault();
           setSearch(searchInput.trim());
           setPageNumber(1);
         }}
       >
-        <div className="w-full space-y-2 sm:max-w-sm">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="supplier-search">Search by name or code</Label>
           <Input
             id="supplier-search"
             type="search"
             value={searchInput}
+            className="h-11 bg-card"
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="For example, office"
           />
         </div>
 
-        <div className="w-full space-y-2 sm:w-40">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="supplier-status">Status</Label>
           <select
             id="supplier-status"
@@ -63,7 +69,7 @@ export function SuppliersPage() {
               setStatus(event.target.value);
               setPageNumber(1);
             }}
-            className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="h-11 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <option value="all">All suppliers</option>
             <option value="active">Active</option>
@@ -71,7 +77,7 @@ export function SuppliersPage() {
           </select>
         </div>
 
-        <div className="w-full space-y-2 sm:w-32">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="supplier-page-size">Rows per page</Label>
           <select
             id="supplier-page-size"
@@ -80,7 +86,7 @@ export function SuppliersPage() {
               setPageSize(Number(event.target.value));
               setPageNumber(1);
             }}
-            className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="h-11 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>
@@ -89,13 +95,17 @@ export function SuppliersPage() {
           </select>
         </div>
 
-        <Button type="submit">Search</Button>
+        <Button type="submit" className="min-h-11 w-full self-end xl:w-auto">
+          Search
+        </Button>
       </form>
 
       {query.isPending ? (
-        <p role="status">Loading suppliers…</p>
+        <FeedbackPanel title="Loading suppliers" role="status">
+          <p>Fetching the supplier directory…</p>
+        </FeedbackPanel>
       ) : query.isError ? (
-        <div role="alert" className="space-y-3">
+        <FeedbackPanel title="Couldn't load suppliers" role="alert">
           <p>
             {query.error instanceof ApiError
               ? query.error.message
@@ -105,14 +115,21 @@ export function SuppliersPage() {
           <Button
             type="button"
             variant="outline"
+            className="min-h-11"
             disabled={query.isFetching}
             onClick={() => void query.refetch()}
           >
             Try again
           </Button>
-        </div>
+        </FeedbackPanel>
       ) : query.data.items.length === 0 ? (
-        <p>No suppliers match your filters.</p>
+        <FeedbackPanel title="No suppliers found">
+          <p>
+            No suppliers are available on this page with the current filters.
+            Try another search, change the status filter, or return to an
+            earlier page.
+          </p>
+        </FeedbackPanel>
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
@@ -127,29 +144,33 @@ export function SuppliersPage() {
       {query.isSuccess && (
         <nav
           aria-label="Supplier pagination"
-          className="flex flex-wrap items-center gap-3"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4 shadow-sm"
         >
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pageNumber <= 1 || query.isFetching}
-            onClick={() => setPageNumber((current) => current - 1)}
-          >
-            Previous
-          </Button>
-
-          <span className="text-sm">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
             Page {pageNumber} of {totalPages}
-          </span>
+          </p>
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pageNumber >= totalPages || query.isFetching}
-            onClick={() => setPageNumber((current) => current + 1)}
-          >
-            Next
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={pageNumber <= 1 || query.isFetching}
+              onClick={() => setPageNumber((current) => current - 1)}
+            >
+              Previous
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={pageNumber >= totalPages || query.isFetching}
+              onClick={() => setPageNumber((current) => current + 1)}
+            >
+              Next
+            </Button>
+          </div>
         </nav>
       )}
     </div>

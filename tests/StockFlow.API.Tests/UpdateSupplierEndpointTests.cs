@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -37,7 +37,7 @@ public class UpdateSupplierEndpointTests
         if (!isActive)
             supplier.Deactivate();
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PutAsJsonAsync(
             $"/api/suppliers/{supplier.Id}", ValidRequest());
 
@@ -68,7 +68,7 @@ public class UpdateSupplierEndpointTests
         var request = ValidRequest();
         request["phoneNumber"] = phone;
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PutAsJsonAsync(
             $"/api/suppliers/{supplier.Id}", request);
 
@@ -91,7 +91,7 @@ public class UpdateSupplierEndpointTests
         var request = ValidRequest();
         request.Remove(field);
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PutAsJsonAsync(
             $"/api/suppliers/{supplier.Id}", request);
 
@@ -119,7 +119,7 @@ public class UpdateSupplierEndpointTests
             request["phoneNumber"] =
                 new string('1', Supplier.MaxPhoneNumberLength + 1);
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PutAsJsonAsync(
             $"/api/suppliers/{supplier.Id}", request);
 
@@ -138,7 +138,7 @@ public class UpdateSupplierEndpointTests
     public async Task Update_WhenMissing_ReturnsNotFound()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.PutAsJsonAsync(
             $"/api/suppliers/{Guid.NewGuid()}", ValidRequest());
@@ -151,7 +151,7 @@ public class UpdateSupplierEndpointTests
     public async Task Update_WithEmptyId_ReturnsBadRequest()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.PutAsJsonAsync(
             $"/api/suppliers/{Guid.Empty}", ValidRequest());
@@ -169,7 +169,7 @@ public class UpdateSupplierEndpointTests
     public async Task Update_WithMalformedId_DoesNotMatchRoute()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.PutAsJsonAsync(
             "/api/suppliers/not-a-guid", ValidRequest());
@@ -194,7 +194,7 @@ public class UpdateSupplierEndpointTests
         else
             factory.Suppliers.LookupException = failure;
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PutAsJsonAsync(
             $"/api/suppliers/{supplier.Id}", ValidRequest());
 

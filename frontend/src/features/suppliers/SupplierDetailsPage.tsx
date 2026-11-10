@@ -6,10 +6,15 @@ import { ApiError } from "@/lib/ApiError";
 import { useSupplier } from "./useSupplier";
 import { UpdateSupplierForm } from "./UpdateSupplierForm";
 import { SupplierStatusControl } from "./SupplierStatusControl";
+import { StatusBadge } from "@/components/StatusBadge";
+import { FeedbackPanel } from "@/components/FeedbackPanel";
+import { usePermissions } from "../auth/usePermissions";
 
 export function SupplierDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const query = useSupplier(id ?? "");
+  const { can } = usePermissions();
+  const canManageSuppliers = can("Suppliers.Manage");
 
   const isNotFound =
     query.error instanceof ApiError && query.error.status === 404;
@@ -23,20 +28,27 @@ export function SupplierDetailsPage() {
 
       <Link
         to="/suppliers"
-        className="text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+        className="inline-flex min-h-11 items-center rounded-lg text-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
       >
         Back to suppliers
       </Link>
 
       {!id ? (
-        <p role="alert">A supplier identifier is required.</p>
+        <FeedbackPanel title="Missing supplier identifier" role="alert">
+          <p>A supplier identifier is required.</p>
+        </FeedbackPanel>
       ) : query.isPending ? (
-        <p role="status">Loading supplier…</p>
+        <FeedbackPanel title="Loading supplier" role="status">
+          <p>Fetching supplier contact information…</p>
+        </FeedbackPanel>
       ) : query.isError ? (
-        <div role="alert" className="space-y-3">
+        <FeedbackPanel
+          title={isNotFound ? "Supplier not found" : "Couldn't load supplier"}
+          role="alert"
+        >
           <p>
             {isNotFound
-              ? "This supplier could not be found."
+              ? "This supplier could not be found. Return to the supplier directory to select another."
               : query.error instanceof ApiError
                 ? query.error.message
                 : "Couldn't load this supplier. Check your connection and try again."}
@@ -46,58 +58,63 @@ export function SupplierDetailsPage() {
             <Button
               type="button"
               variant="outline"
+              className="min-h-11"
               disabled={query.isFetching}
               onClick={() => void query.refetch()}
             >
               Try again
             </Button>
           )}
-        </div>
+        </FeedbackPanel>
       ) : (
         <div className="space-y-6 mt-2">
-          <Card>
-            <CardContent>
-              <dl className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <dt className="text-sm text-muted-foreground">Code</dt>
-                  <dd className="mt-1 font-medium">{query.data.code}</dd>
-                </div>
+          <Card className="gap-0 py-0">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-5">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold wrap-break-word">
+                  {query.data.name}
+                </h2>
+                <p className="mt-1 font-mono text-xs text-muted-foreground wrap-break-word">
+                  {query.data.code}
+                </p>
+              </div>
 
-                <div>
-                  <dt className="text-sm text-muted-foreground">Name</dt>
-                  <dd className="mt-1 font-medium">{query.data.name}</dd>
-                </div>
+              <StatusBadge isActive={query.data.isActive} />
+            </div>
 
-                <div>
-                  <dt className="text-sm text-muted-foreground">Email</dt>
-                  <dd className="mt-1 wrap-break-word">
+            <CardContent className="py-6">
+              <dl className="grid gap-6 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="text-xs font-medium text-muted-foreground">
+                    Contact email
+                  </dt>
+                  <dd className="mt-2 text-sm font-medium wrap-break-word">
                     {query.data.contactEmail}
                   </dd>
                 </div>
 
-                <div>
-                  <dt className="text-sm text-muted-foreground">Phone</dt>
-                  <dd className="mt-1">
+                <div className="min-w-0">
+                  <dt className="text-xs font-medium text-muted-foreground">
+                    Phone number
+                  </dt>
+                  <dd className="mt-2 text-sm font-medium wrap-break-word">
                     {query.data.phoneNumber ?? "Not provided"}
-                  </dd>
-                </div>
-
-                <div>
-                  <dt className="text-sm text-muted-foreground">Status</dt>
-                  <dd className="mt-1">
-                    {query.data.isActive ? "Active" : "Inactive"}
                   </dd>
                 </div>
               </dl>
             </CardContent>
           </Card>
 
-          <SupplierStatusControl
-            key={`status-${query.data.id}`}
-            supplier={query.data}
-          />
+          {canManageSuppliers && (
+            <>
+              <SupplierStatusControl
+                key={`status-${query.data.id}`}
+                supplier={query.data}
+              />
 
-          <UpdateSupplierForm key={query.data.id} supplier={query.data} />
+              <UpdateSupplierForm key={query.data.id} supplier={query.data} />
+            </>
+          )}
         </div>
       )}
     </div>

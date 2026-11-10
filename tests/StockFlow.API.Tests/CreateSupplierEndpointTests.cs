@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -45,7 +45,7 @@ public class CreateSupplierEndpointTests
     public async Task Create_WithValidRequest_ReturnsNormalizedCreatedSupplier()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
 
         using var response = await client.PostAsJsonAsync(
             Endpoint, ValidRequest());
@@ -77,7 +77,7 @@ public class CreateSupplierEndpointTests
         bool explicitNull)
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         var request = ValidRequest();
 
         if (explicitNull)
@@ -114,7 +114,7 @@ public class CreateSupplierEndpointTests
         string kind)
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         var request = ValidRequest();
 
         if (kind == "missing")
@@ -137,7 +137,7 @@ public class CreateSupplierEndpointTests
     public async Task Create_WithMalformedEmail_ReturnsFieldValidation()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         var request = ValidRequest();
         request["contactEmail"] = "not-an-email";
 
@@ -160,7 +160,7 @@ public class CreateSupplierEndpointTests
         string errorField)
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         var request = ValidRequest();
 
         request[jsonField] = jsonField switch
@@ -196,7 +196,7 @@ public class CreateSupplierEndpointTests
         if (inactive) existing.Deactivate();
         factory.Suppliers.Add(existing);
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PostAsJsonAsync(
             Endpoint, ValidRequest());
 
@@ -218,7 +218,7 @@ public class CreateSupplierEndpointTests
         factory.Suppliers.SaveException =
             new SupplierCodeConflictException("SUP-001");
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PostAsJsonAsync(
             Endpoint, ValidRequest());
 
@@ -243,7 +243,7 @@ public class CreateSupplierEndpointTests
         else
             factory.Suppliers.LookupException = failure;
 
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var response = await client.PostAsJsonAsync(
             Endpoint, ValidRequest());
 
@@ -264,7 +264,7 @@ public class CreateSupplierEndpointTests
     public async Task Create_WithMalformedJson_ReturnsBadRequest()
     {
         using var factory = new StockFlowApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateClientWithAntiforgeryAsync();
         using var content = new StringContent(
             "{", Encoding.UTF8, "application/json");
 

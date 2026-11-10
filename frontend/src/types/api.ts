@@ -90,3 +90,24 @@ export interface UpdateSupplierRequest {
   contactEmail: string;
   phoneNumber: string | null;
 }
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface UserProfileDto {
+  id: string;
+  email: string;
+  displayName: string;
+  roles: string[];
+}
+
+export interface AntiforgeryTokenResponse {
+  requestToken: string;
+  headerName: string;
+}
+
+export interface CurrentUserResponse extends UserProfileDto {
+  capabilities: string[];
+}

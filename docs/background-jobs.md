@@ -8,8 +8,14 @@ Job storage uses the hangfire schema in stockflow_dev.
 Background processing is enabled only in Development and can be disabled
 with BackgroundJobs:Enabled=false. API tests explicitly disable it.
 
-The dashboard is available at http://localhost:5290/hangfire.
-Hangfire's default local-request authorization remains enabled.
+The dashboard is available at https://localhost:7167/hangfire.
+
+It requires an authenticated user satisfying BackgroundJobs.Manage,
+currently the Administrator role. Hangfire's default local-request
+authorization filter also remains enabled.
+
+Dashboard access was manually checked for Administrator access,
+Viewer rejection with 403, and anonymous rejection with 401.
 
 ## Monitoring
 
