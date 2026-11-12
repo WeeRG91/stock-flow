@@ -8,6 +8,8 @@ import { SuppliersPage } from "@/features/suppliers/SuppliersPage";
 import { SupplierDetailsPage } from "@/features/suppliers/SupplierDetailsPage";
 import { ProtectedLayout } from "./ProtectedLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
+import { PurchaseOrdersPage } from "@/features/purchase-orders/PurchaseOrdersPage";
+import { PurchaseOrderDetailsPage } from "@/features/purchase-orders/PurchaseOrderDetailsPage";
 
 export function AppRoutes() {
   return (
@@ -21,6 +23,8 @@ export function AppRoutes() {
         <Route path="/warehouses" element={<WarehousesPage />} />
         <Route path="/suppliers" element={<SuppliersPage />} />
         <Route path="/suppliers/:id" element={<SupplierDetailsPage />} />
+        <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
+        <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

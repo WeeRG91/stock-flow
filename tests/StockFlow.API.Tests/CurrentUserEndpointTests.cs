@@ -18,7 +18,8 @@ public class CurrentUserEndpointTests
     [
         StockFlowPolicies.CatalogRead,
         StockFlowPolicies.InventoryRead,
-        StockFlowPolicies.SuppliersRead
+        StockFlowPolicies.SuppliersRead,
+        StockFlowPolicies.PurchaseOrdersRead
     ];
 
     public static IEnumerable<object[]> CapabilityCases()
@@ -26,15 +27,13 @@ public class CurrentUserEndpointTests
         yield return
         [
             new[] { StockFlowRoles.Administrator },
-            new[]
-            {
-                StockFlowPolicies.CatalogRead,
-                StockFlowPolicies.InventoryRead,
-                StockFlowPolicies.InventoryReceive,
-                StockFlowPolicies.SuppliersRead,
-                StockFlowPolicies.SuppliersManage,
-                StockFlowPolicies.BackgroundJobsManage
-            }
+            ReadCapabilities
+                .Append(StockFlowPolicies.InventoryReceive)
+                .Append(StockFlowPolicies.SuppliersManage)
+                .Append(StockFlowPolicies.BackgroundJobsManage)
+                .Append(StockFlowPolicies.PurchaseOrdersManage)
+                .Append(StockFlowPolicies.PurchaseOrdersApprove)
+                .ToArray()
         ];
 
         yield return
@@ -58,6 +57,7 @@ public class CurrentUserEndpointTests
             new[] { StockFlowRoles.PurchasingOfficer },
             ReadCapabilities
                 .Append(StockFlowPolicies.SuppliersManage)
+                .Append(StockFlowPolicies.PurchaseOrdersManage)
                 .ToArray()
         ];
 
@@ -66,6 +66,8 @@ public class CurrentUserEndpointTests
             new[] { StockFlowRoles.PurchasingManager },
             ReadCapabilities
                 .Append(StockFlowPolicies.SuppliersManage)
+                .Append(StockFlowPolicies.PurchaseOrdersManage)
+                .Append(StockFlowPolicies.PurchaseOrdersApprove)
                 .ToArray()
         ];
 
@@ -150,7 +152,8 @@ public class CurrentUserEndpointTests
         AssertCapabilities(
             ReadCapabilities
                 .Append(StockFlowPolicies.InventoryReceive)
-                .Append(StockFlowPolicies.SuppliersManage),
+                .Append(StockFlowPolicies.SuppliersManage)
+                .Append(StockFlowPolicies.PurchaseOrdersManage),
             body.Capabilities);
     }
 

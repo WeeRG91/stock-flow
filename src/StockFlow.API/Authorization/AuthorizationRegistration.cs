@@ -67,6 +67,29 @@ namespace StockFlow.API.Authorization
                     policy => policy
                         .RequireAuthenticatedUser()
                         .RequireRole(StockFlowRoles.Administrator));
+
+                options.AddPolicy(
+                    StockFlowPolicies.PurchaseOrdersRead,
+                    policy => policy
+                        .RequireAuthenticatedUser()
+                        .RequireRole(readRoles));
+
+                options.AddPolicy(
+                    StockFlowPolicies.PurchaseOrdersManage,
+                    policy => policy
+                    .RequireAuthenticatedUser()
+                    .RequireRole(
+                        StockFlowRoles.Administrator,
+                        StockFlowRoles.PurchasingOfficer,
+                        StockFlowRoles.PurchasingManager));
+
+                options.AddPolicy(
+                    StockFlowPolicies.PurchaseOrdersApprove,
+                    policy => policy
+                        .RequireAuthenticatedUser()
+                        .RequireRole(
+                            StockFlowRoles.Administrator,
+                            StockFlowRoles.PurchasingManager));
             });
 
             return services;

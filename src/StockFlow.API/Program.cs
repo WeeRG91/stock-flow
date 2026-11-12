@@ -7,12 +7,20 @@ using StockFlow.API.Errors;
 using StockFlow.API.Hubs;
 using StockFlow.API.Notifications;
 using StockFlow.API.RateLimiting;
+using StockFlow.Application.Abstractions;
 using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Authorization;
 using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Inventory.MonitorLowStock;
 using StockFlow.Application.Inventory.ReceiveStock;
 using StockFlow.Application.Products.GetProducts;
+using StockFlow.Application.PurchaseOrders.ApprovePurchaseOrder;
+using StockFlow.Application.PurchaseOrders.CreatePurchaseOrder;
+using StockFlow.Application.PurchaseOrders.GetPurchaseOrderById;
+using StockFlow.Application.PurchaseOrders.GetPurchaseOrders;
+using StockFlow.Application.PurchaseOrders.RejectPurchaseOrder;
+using StockFlow.Application.PurchaseOrders.SubmitPurchaseOrder;
+using StockFlow.Application.PurchaseOrders.UpdateDraftPurchaseOrder;
 using StockFlow.Application.Suppliers.ActivateSupplier;
 using StockFlow.Application.Suppliers.CreateSupplier;
 using StockFlow.Application.Suppliers.DeactivateSupplier;
@@ -49,6 +57,13 @@ builder.Services.AddScoped<GetSupplierByIdQueryHandler>();
 builder.Services.AddScoped<UpdateSupplierCommandHandler>();
 builder.Services.AddScoped<ActivateSupplierCommandHandler>();
 builder.Services.AddScoped<DeactivateSupplierCommandHandler>();
+builder.Services.AddScoped<CreatePurchaseOrderCommandHandler>();
+builder.Services.AddScoped<GetPurchaseOrderByIdQueryHandler>();
+builder.Services.AddScoped<GetPurchaseOrdersQueryHandler>();
+builder.Services.AddScoped<UpdateDraftPurchaseOrderCommandHandler>();
+builder.Services.AddScoped<SubmitPurchaseOrderCommandHandler>();
+builder.Services.AddScoped<ApprovePurchaseOrderCommandHandler>();
+builder.Services.AddScoped<RejectPurchaseOrderCommandHandler>();
 
 builder.Services.AddScoped<IInventoryChangeNotifier, SignalRInventoryChangeNotifier>();
 
@@ -63,6 +78,8 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddStockFlowAuthentication();
 builder.Services.AddStockFlowAuthorization();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddStockFlowAntiforgery();
 builder.Services.AddStockFlowRateLimiting();
 

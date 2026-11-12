@@ -111,3 +111,84 @@ export interface AntiforgeryTokenResponse {
 export interface CurrentUserResponse extends UserProfileDto {
   capabilities: string[];
 }
+
+export type PurchaseOrderStatus = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface PurchaseOrderSummaryDto {
+  id: string;
+  orderNumber: string;
+  supplierCode: string;
+  supplierName: string;
+  warehouseCode: string;
+  warehouseName: string;
+  status: PurchaseOrderStatus;
+  createdAt: string;
+  lineCount: number;
+}
+
+export interface GetPurchaseOrdersResult {
+  items: PurchaseOrderSummaryDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+export interface CreatePurchaseOrderLineRequest {
+  productId: string;
+  orderedQuantity: number;
+  unitPrice: number;
+}
+
+export interface CreatePurchaseOrderRequest {
+  supplierId: string;
+  warehouseId: string;
+  lines: CreatePurchaseOrderLineRequest[];
+}
+
+export interface CreatePurchaseOrderResult {
+  purchaseOrderId: string;
+  orderNumber: string;
+  status: PurchaseOrderStatus;
+  currency: string;
+  totalAmount: number;
+  createdAt: string;
+  createdByUserId: string;
+}
+
+export interface PurchaseOrderLineDto {
+  id: string;
+  productId: string;
+  productSku: string;
+  productName: string;
+  orderedQuantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface PurchaseOrderDetailsDto {
+  id: string;
+  orderNumber: string;
+  supplierId: string;
+  supplierCode: string;
+  supplierName: string;
+  warehouseId: string;
+  warehouseCode: string;
+  warehouseName: string;
+  status: PurchaseOrderStatus;
+  createdAt: string;
+  createdByUserId: string;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  approvedByUserId: string | null;
+  rejectedByUserId: string | null;
+  version: string;
+  currency: string;
+  lines: PurchaseOrderLineDto[];
+  totalAmount: number;
+}
+
+export interface UpdateDraftPurchaseOrderRequest {
+  expectedVersion: string;
+  lines: CreatePurchaseOrderLineRequest[];
+}

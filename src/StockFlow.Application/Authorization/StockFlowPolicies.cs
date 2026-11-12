@@ -8,5 +8,8 @@
         public const string SuppliersRead = "Suppliers.Read";
         public const string SuppliersManage = "Suppliers.Manage";
         public const string BackgroundJobsManage = "BackgroundJobs.Manage";
+        public const string PurchaseOrdersRead = "PurchaseOrders.Read";
+        public const string PurchaseOrdersManage = "PurchaseOrders.Manage";
+        public const string PurchaseOrdersApprove = "PurchaseOrders.Approve";
     }
 }

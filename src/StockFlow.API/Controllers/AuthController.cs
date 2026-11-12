@@ -129,6 +129,9 @@ namespace StockFlow.API.Controllers
                 StockFlowPolicies.SuppliersRead,
                 StockFlowPolicies.SuppliersManage,
                 StockFlowPolicies.BackgroundJobsManage,
+                StockFlowPolicies.PurchaseOrdersRead,
+                StockFlowPolicies.PurchaseOrdersManage,
+                StockFlowPolicies.PurchaseOrdersApprove,
             };
 
             var capabilities = new List<string>();

@@ -3,13 +3,13 @@ import { Link } from "react-router";
 import { AppNavigation } from "./AppNavigation";
 import { Button } from "@/components/ui/button";
 import { Boxes, LogOut, Menu, UserRound, X } from "lucide-react";
-import type { UserProfileDto } from "@/types/api";
+import type { CurrentUserResponse } from "@/types/api";
 import { useLogout } from "@/features/auth/useLogout";
 import { ApiError } from "@/lib/ApiError";
 
 type AppLayoutProps = {
   children: ReactNode;
-  user: UserProfileDto;
+  user: CurrentUserResponse;
 };
 
 export function AppLayout({ children, user }: AppLayoutProps) {
@@ -77,7 +77,11 @@ export function AppLayout({ children, user }: AppLayoutProps) {
         >
           <div className="min-h-0 overflow-hidden">
             <div className="p-4">
-              <AppNavigation />
+              <AppNavigation
+                canReadPurchaseOrders={user.capabilities.includes(
+                  "PurchaseOrders.Read",
+                )}
+              />
             </div>
           </div>
         </div>

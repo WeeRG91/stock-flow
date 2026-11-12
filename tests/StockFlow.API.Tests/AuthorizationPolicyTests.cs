@@ -35,7 +35,10 @@ public class AuthorizationPolicyTests
         StockFlowPolicies.InventoryReceive,
         StockFlowPolicies.SuppliersRead,
         StockFlowPolicies.SuppliersManage,
-        StockFlowPolicies.BackgroundJobsManage
+        StockFlowPolicies.BackgroundJobsManage,
+        StockFlowPolicies.PurchaseOrdersRead,
+        StockFlowPolicies.PurchaseOrdersManage,
+        StockFlowPolicies.PurchaseOrdersApprove
     ];
 
     public static IEnumerable<object[]> RoleMatrix()
@@ -163,5 +166,62 @@ public class AuthorizationPolicyTests
         Assert.True(receive.Succeeded);
         Assert.True(suppliers.Succeeded);
         Assert.False(jobs.Succeeded);
+    }
+
+    public static IEnumerable<object[]> PurchasingRoleMatrix()
+    {
+        var roles = new[]
+        {
+        (StockFlowRoles.Administrator, true, true),
+        (StockFlowRoles.InventoryManager, false, false),
+        (StockFlowRoles.PurchasingOfficer, true, false),
+        (StockFlowRoles.PurchasingManager, true, true),
+        (StockFlowRoles.WarehouseStaff, false, false),
+        (StockFlowRoles.Viewer, false, false)
+    };
+
+        foreach (var (role, manage, approve) in roles)
+        {
+            yield return
+            [
+                role,
+            StockFlowPolicies.PurchaseOrdersRead,
+            true
+            ];
+
+            yield return
+            [
+                role,
+            StockFlowPolicies.PurchaseOrdersManage,
+            manage
+            ];
+
+            yield return
+            [
+                role,
+            StockFlowPolicies.PurchaseOrdersApprove,
+            approve
+            ];
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(PurchasingRoleMatrix))]
+    public async Task PurchasingPolicy_EnforcesRoleMatrix(
+        string role,
+        string policy,
+        bool expected)
+    {
+        using var services = CreateServices();
+
+        var authorization =
+            services.GetRequiredService<IAuthorizationService>();
+
+        var result = await authorization.AuthorizeAsync(
+            CreateUser(true, role),
+            resource: null,
+            policyName: policy);
+
+        Assert.Equal(expected, result.Succeeded);
     }
 }

@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using StockFlow.Application.Abstractions.Authentication;
 using StockFlow.Application.Abstractions.Persistence;
+using StockFlow.Application.Abstractions.Purchasing;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Inventory.MonitorLowStock;
 using StockFlow.Application.Products.GetProducts;
+using StockFlow.Application.PurchaseOrders;
 using StockFlow.Application.Suppliers;
 using StockFlow.Application.Warehouses.GetWarehouses;
 using StockFlow.Infrastructure.Identity;
@@ -15,6 +17,7 @@ using StockFlow.Infrastructure.Inventory.MonitorLowStock;
 using StockFlow.Infrastructure.Persistence;
 using StockFlow.Infrastructure.Persistence.Repositories;
 using StockFlow.Infrastructure.Products.GetProducts;
+using StockFlow.Infrastructure.Purchasing;
 using StockFlow.Infrastructure.Suppliers;
 using StockFlow.Infrastructure.Time;
 using StockFlow.Infrastructure.Warehouses.GetWarehouses;
@@ -75,6 +78,9 @@ namespace StockFlow.Infrastructure
             services.AddScoped<ILowStockAlertStore, LowStockAlertStore>();
             services.AddScoped<ISupplierRepository, SupplierRepository>();
             services.AddScoped<ISupplierReadService, SupplierReadService>();
+            services.AddSingleton<IPurchaseOrderNumberGenerator, GuidPurchaseOrderNumberGenerator>();
+            services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
+            services.AddScoped<IPurchaseOrderReadService, PurchaseOrderReadService>();
 
             return services;
         }

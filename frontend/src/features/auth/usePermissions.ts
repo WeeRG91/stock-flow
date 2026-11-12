@@ -11,7 +11,9 @@ type Capability =
   | "Inventory.Receive"
   | "Suppliers.Read"
   | "Suppliers.Manage"
-  | "BackgroundJobs.Manage";
+  | "BackgroundJobs.Manage"
+  | "PurchaseOrders.Manage"
+  | "PurchaseOrders.Approve";
 
 export function usePermissions() {
   const { user } = useOutletContext<AuthenticatedOutletContext>();
@@ -20,5 +22,5 @@ export function usePermissions() {
     return user.capabilities.includes(capability);
   }
 
-  return { can };
+  return { can, user };
 }

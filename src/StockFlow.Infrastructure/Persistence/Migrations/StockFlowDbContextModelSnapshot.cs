@@ -17,7 +17,7 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -113,6 +113,120 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Products", (string)null);
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("RejectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RejectedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SupplierCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SupplierName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("WarehouseCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("WarehouseName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderNumber")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PurchaseOrders_OrderNumber");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("PurchaseOrders", (string)null);
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.PurchaseOrderLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("OrderedQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductSku")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("PurchaseOrderId", "ProductId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PurchaseOrderLines_PurchaseOrderId_ProductId");
+
+                    b.ToTable("PurchaseOrderLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PurchaseOrderLines_OrderedQuantity_Positive", "\"OrderedQuantity\" > 0");
+
+                            t.HasCheckConstraint("CK_PurchaseOrderLines_UnitPrice_Valid", "\"UnitPrice\" >= 0 AND \"UnitPrice\" <= 79228162514264337593543950335 AND \"UnitPrice\" = round(\"UnitPrice\", 2)");
+                        });
                 });
 
             modelBuilder.Entity("StockFlow.Domain.Entities.StockMovement", b =>
@@ -240,6 +354,36 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockFlow.Domain.Entities.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.PurchaseOrderLine", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockFlow.Domain.Entities.PurchaseOrder", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.StockMovement", b =>
                 {
                     b.HasOne("StockFlow.Domain.Entities.Inventory", null)
@@ -247,6 +391,11 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         .HasForeignKey("InventoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

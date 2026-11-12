@@ -45,6 +45,16 @@ namespace StockFlow.API.Errors
 
             var (status, title, detail) = exception switch
             {
+                AuthenticationRequiredException authentication => (
+                    StatusCodes.Status401Unauthorized,
+                    "Authentication required",
+                    authentication.Message),
+
+                PermissionDeniedException permission => (
+                    StatusCodes.Status403Forbidden,
+                    "Access denied",
+                    permission.Message),
+
                 ResourceNotFoundException missing => (
                     StatusCodes.Status404NotFound,
                     "Resource not found",
@@ -64,6 +74,11 @@ namespace StockFlow.API.Errors
                     StatusCodes.Status409Conflict,
                     "Supplier code conflict",
                     supplierConflict.Message),
+
+                PurchaseOrderConflictException purchaseOrderConflict => (
+                    StatusCodes.Status409Conflict,
+                    "Purchase order conflict",
+                    purchaseOrderConflict.Message),
 
                 _ => (
                     StatusCodes.Status500InternalServerError,

@@ -5,6 +5,11 @@ namespace StockFlow.Domain.Tests;
 
 public class PurchaseOrderTests
 {
+    private static readonly Guid CreatorId =
+        Guid.Parse("11111111-2222-3333-4444-555555555555");
+
+    private static readonly Guid DecisionUserId = Guid.NewGuid();
+
     private static readonly DateTimeOffset CreatedAt =
         new(2026, 11, 10, 10, 0, 0, TimeSpan.Zero);
 
@@ -18,7 +23,8 @@ public class PurchaseOrderTests
             Guid.NewGuid(),
             "  bru-01  ",
             "  Brussels Warehouse  ",
-            CreatedAt);
+            CreatedAt,
+            CreatorId);
     }
 
     [Fact]
@@ -39,6 +45,7 @@ public class PurchaseOrderTests
         Assert.Equal("EUR", order.Currency);
         Assert.Equal(PurchaseOrderStatus.Draft, order.Status);
         Assert.Equal(CreatedAt, order.CreatedAt);
+        Assert.Equal(CreatorId, order.CreatedByUserId);
         Assert.Null(order.SubmittedAt);
         Assert.Null(order.ApprovedAt);
         Assert.Null(order.RejectedAt);
@@ -490,11 +497,11 @@ public class PurchaseOrderTests
 
         if (status == PurchaseOrderStatus.Approved)
         {
-            order.Approve(CreatedAt.AddMinutes(2));
+            order.Approve(CreatedAt.AddMinutes(2), DecisionUserId);
         }
         else if (status == PurchaseOrderStatus.Rejected)
         {
-            order.Reject(CreatedAt.AddMinutes(2));
+            order.Reject(CreatedAt.AddMinutes(2), DecisionUserId);
         }
 
         return order;
@@ -551,11 +558,13 @@ public class PurchaseOrderTests
         var original = Assert.Single(order.Lines);
         var timestamp = CreatedAt.AddMinutes(2);
 
-        order.Approve(timestamp);
+        order.Approve(timestamp, DecisionUserId);
 
         Assert.Equal(PurchaseOrderStatus.Approved, order.Status);
         Assert.Equal(CreatedAt.AddMinutes(1), order.SubmittedAt);
         Assert.Equal(timestamp, order.ApprovedAt);
+        Assert.Equal(DecisionUserId, order.ApprovedByUserId);
+        Assert.Null(order.RejectedByUserId);
         Assert.Null(order.RejectedAt);
         Assert.Same(original, Assert.Single(order.Lines));
         Assert.Equal(20m, order.TotalAmount);
@@ -568,14 +577,40 @@ public class PurchaseOrderTests
         var original = Assert.Single(order.Lines);
         var timestamp = CreatedAt.AddMinutes(2);
 
-        order.Reject(timestamp);
+        order.Reject(timestamp, DecisionUserId);
 
         Assert.Equal(PurchaseOrderStatus.Rejected, order.Status);
         Assert.Equal(CreatedAt.AddMinutes(1), order.SubmittedAt);
         Assert.Null(order.ApprovedAt);
         Assert.Equal(timestamp, order.RejectedAt);
+        Assert.Equal(DecisionUserId, order.RejectedByUserId);
+        Assert.Null(order.ApprovedByUserId);
         Assert.Same(original, Assert.Single(order.Lines));
         Assert.Equal(20m, order.TotalAmount);
+    }
+
+    [Theory]
+    [InlineData(true, "approvedByUserId")]
+    [InlineData(false, "rejectedByUserId")]
+    public void Decision_WithEmptyActorId_LeavesOrderPending(
+        bool approve,
+        string expectedParameter)
+    {
+        var order = CreateOrderInState(PurchaseOrderStatus.PendingApproval);
+        var timestamp = CreatedAt.AddMinutes(2);
+
+        Action decide = approve
+            ? () => order.Approve(timestamp, Guid.Empty)
+            : () => order.Reject(timestamp, Guid.Empty);
+
+        var error = Assert.Throws<ArgumentException>(decide);
+
+        Assert.Equal(expectedParameter, error.ParamName);
+        Assert.Equal(PurchaseOrderStatus.PendingApproval, order.Status);
+        Assert.Null(order.ApprovedAt);
+        Assert.Null(order.ApprovedByUserId);
+        Assert.Null(order.RejectedAt);
+        Assert.Null(order.RejectedByUserId);
     }
 
     [Theory]
@@ -596,14 +631,14 @@ public class PurchaseOrderTests
         }
         else if (operation == "approve")
         {
-            order.Approve(CreatedAt);
+            order.Approve(CreatedAt, DecisionUserId);
 
             Assert.Equal(CreatedAt, order.ApprovedAt);
             Assert.Equal(PurchaseOrderStatus.Approved, order.Status);
         }
         else
         {
-            order.Reject(CreatedAt);
+            order.Reject(CreatedAt, DecisionUserId);
 
             Assert.Equal(CreatedAt, order.RejectedAt);
             Assert.Equal(PurchaseOrderStatus.Rejected, order.Status);
@@ -629,8 +664,8 @@ public class PurchaseOrderTests
         Action action = operation switch
         {
             "submit" => () => order.Submit(CreatedAt.AddMinutes(3)),
-            "approve" => () => order.Approve(CreatedAt.AddMinutes(3)),
-            "reject" => () => order.Reject(CreatedAt.AddMinutes(3)),
+            "approve" => () => order.Approve(CreatedAt.AddMinutes(3), DecisionUserId),
+            "reject" => () => order.Reject(CreatedAt.AddMinutes(3), DecisionUserId),
             _ => throw new ArgumentException("Unknown operation.")
         };
 
@@ -685,8 +720,8 @@ public class PurchaseOrderTests
         Action action = operation switch
         {
             "submit" => () => order.Submit(timestamp),
-            "approve" => () => order.Approve(timestamp),
-            "reject" => () => order.Reject(timestamp),
+            "approve" => () => order.Approve(timestamp, DecisionUserId),
+            "reject" => () => order.Reject(timestamp, DecisionUserId),
             _ => throw new ArgumentException("Unknown operation.")
         };
 
@@ -779,7 +814,8 @@ public class PurchaseOrderTests
                 Guid.NewGuid(),
                 values["warehouseCode"]!,
                 values["warehouseName"]!,
-                CreatedAt));
+                CreatedAt,
+                CreatorId));
 
         Assert.Equal(field, exception.ParamName);
     }
@@ -804,7 +840,8 @@ public class PurchaseOrderTests
                 Guid.NewGuid(),
                 "BRU-01",
                 "Warehouse",
-                CreatedAt);
+                CreatedAt,
+                CreatorId);
         }
 
         if (accepted)
@@ -839,7 +876,8 @@ public class PurchaseOrderTests
                 warehouseId,
                 "BRU-01",
                 "Warehouse",
-                CreatedAt));
+                CreatedAt,
+                CreatorId));
 
         Assert.Equal(
             emptySupplier ? "supplierId" : "warehouseId",
@@ -877,11 +915,30 @@ public class PurchaseOrderTests
                 Guid.NewGuid(),
                 "BRU-01",
                 "Warehouse",
-                timestamp));
+                timestamp,
+                CreatorId));
 
         Assert.Equal(
             "createdAt",
             Assert.IsAssignableFrom<ArgumentException>(exception).ParamName);
+    }
+
+    [Fact]
+    public void Constructor_WithEmptyCreatorId_Throws()
+    {
+        var exception = Assert.Throws<ArgumentException>(
+            () => new PurchaseOrder(
+                "PO-001",
+                Guid.NewGuid(),
+                "SUP-001",
+                "Supplier",
+                Guid.NewGuid(),
+                "BRU-01",
+                "Warehouse",
+                CreatedAt,
+                Guid.Empty));
+
+        Assert.Equal("createdByUserId", exception.ParamName);
     }
 
     [Fact]
@@ -904,5 +961,96 @@ public class PurchaseOrderTests
         Assert.NotEqual(Guid.Empty, firstLineId);
         Assert.NotEqual(Guid.Empty, secondLineId);
         Assert.NotEqual(firstLineId, secondLineId);
+    }
+
+    [Fact]
+    public void ReplaceDraftLines_KeepsRetainedIdentityAndSnapshots()
+    {
+        var order = CreateOrder();
+        var retainedProductId = Guid.NewGuid();
+        var removedProductId = Guid.NewGuid();
+        var addedProductId = Guid.NewGuid();
+
+        var retainedLineId = order.AddLine(
+            retainedProductId, "LAPTOP", "Original laptop", 1, 20m);
+
+        order.AddLine(removedProductId, "DOCK", "Dock", 1, 5m);
+
+        order.ReplaceDraftLines(
+        [
+            new(retainedProductId, "NEW-SKU", "Renamed laptop", 2, 22m),
+        new(addedProductId, "MOUSE", "Mouse", 3, 4m)
+        ]);
+
+        Assert.Collection(
+            order.Lines,
+            retained =>
+            {
+                Assert.Equal(retainedLineId, retained.Id);
+                Assert.Equal("LAPTOP", retained.ProductSku);
+                Assert.Equal("Original laptop", retained.ProductName);
+                Assert.Equal(2, retained.OrderedQuantity);
+                Assert.Equal(22m, retained.UnitPrice);
+            },
+            added =>
+            {
+                Assert.Equal(addedProductId, added.ProductId);
+                Assert.Equal("MOUSE", added.ProductSku);
+                Assert.NotEqual(Guid.Empty, added.Id);
+            });
+
+        Assert.Equal(56m, order.TotalAmount);
+    }
+
+    [Fact]
+    public void ReplaceDraftLines_WithInvalidFinalLine_LeavesDraftIntact()
+    {
+        var order = CreateOrder();
+        var productId = Guid.NewGuid();
+
+        order.AddLine(productId, "LAPTOP", "Laptop", 1, 20m);
+        order.AddLine(Guid.NewGuid(), "DOCK", "Dock", 1, 5m);
+        var originalLines = order.Lines.ToArray();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => order.ReplaceDraftLines(
+        [
+            new(productId, "LAPTOP", "Laptop", 2, 22m),
+        new(Guid.NewGuid(), "MOUSE", "Mouse", 0, 4m)
+        ]));
+
+        Assert.Collection(
+            order.Lines,
+            first => Assert.Same(originalLines[0], first),
+            second => Assert.Same(originalLines[1], second));
+
+        Assert.Equal(25m, order.TotalAmount);
+        Assert.Equal(PurchaseOrderStatus.Draft, order.Status);
+    }
+
+    [Fact]
+    public void ReplaceDraftLines_WithEmptyList_ClearsDraft()
+    {
+        var order = CreateOrder();
+        order.AddLine(Guid.NewGuid(), "DOCK", "Dock", 1, 5m);
+
+        order.ReplaceDraftLines([]);
+
+        Assert.Empty(order.Lines);
+        Assert.Equal(0m, order.TotalAmount);
+        Assert.Equal(PurchaseOrderStatus.Draft, order.Status);
+    }
+
+    [Fact]
+    public void ReplaceDraftLines_AfterSubmission_RejectsEdit()
+    {
+        var order = CreateOrder();
+        order.AddLine(Guid.NewGuid(), "DOCK", "Dock", 1, 5m);
+        var originalLine = Assert.Single(order.Lines);
+        order.Submit(CreatedAt.AddMinutes(1));
+
+        Assert.Throws<InvalidOperationException>(() => order.ReplaceDraftLines([]));
+
+        Assert.Same(originalLine, Assert.Single(order.Lines));
+        Assert.Equal(5m, order.TotalAmount);
     }
 }

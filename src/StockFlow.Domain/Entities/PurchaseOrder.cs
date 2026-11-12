@@ -26,6 +26,10 @@ namespace StockFlow.Domain.Entities
         public IReadOnlyList<PurchaseOrderLine> Lines => _lines.AsReadOnly();
         public decimal TotalAmount => _lines.Sum(line => line.LineTotal);
 
+        public Guid CreatedByUserId { get; }
+        public Guid? ApprovedByUserId { get; private set; }
+        public Guid? RejectedByUserId { get; private set; }
+
         public PurchaseOrder(
             string orderNumber,
             Guid supplierId,
@@ -34,7 +38,8 @@ namespace StockFlow.Domain.Entities
             Guid warehouseId,
             string warehouseCode,
             string warehouseName,
-            DateTimeOffset createdAt)
+            DateTimeOffset createdAt,
+            Guid createdByUserId)
         {
             if (string.IsNullOrWhiteSpace(orderNumber))
             {
@@ -95,6 +100,13 @@ namespace StockFlow.Domain.Entities
                     nameof(createdAt));
             }
 
+            if (createdByUserId == Guid.Empty)
+            {
+                throw new ArgumentException(
+                    "Creator user ID must not be empty.",
+                    nameof(createdByUserId));
+            }
+
             Id = Guid.NewGuid();
             OrderNumber = normalizedOrderNumber;
             SupplierId = supplierId;
@@ -105,6 +117,7 @@ namespace StockFlow.Domain.Entities
             WarehouseName = normalizedWarehouseName;
             CreatedAt = createdAt;
             Status = PurchaseOrderStatus.Draft;
+            CreatedByUserId = createdByUserId;
         }
 
         public Guid AddLine(
@@ -171,6 +184,52 @@ namespace StockFlow.Domain.Entities
             _lines[index] = replacement;
         }
 
+        public void ReplaceDraftLines(IReadOnlyList<PurchaseOrderLineDraft> lines)
+        {
+            ArgumentNullException.ThrowIfNull(lines);
+            EnsureDraft();
+
+            var existingByProduct = _lines.ToDictionary(line => line.ProductId);
+            var seenProducts = new HashSet<Guid>();
+            var replacements = new List<PurchaseOrderLine>(lines.Count);
+
+            foreach (var draft in lines)
+            {
+                ArgumentNullException.ThrowIfNull(draft);
+
+                if (!seenProducts.Add(draft.ProductId))
+                {
+                    throw new ArgumentException(
+                        "A product may appear only once per order.", nameof(lines));
+                }
+
+                if (existingByProduct.TryGetValue(draft.ProductId, out var existing))
+                {
+                    var replacement =
+                        existing.OrderedQuantity == draft.OrderedQuantity &&
+                        existing.UnitPrice == draft.UnitPrice
+                            ? existing
+                            : existing.WithUpdatedTerms(draft.OrderedQuantity, draft.UnitPrice);
+
+                    replacements.Add(replacement);
+                }
+                else
+                {
+                    replacements.Add(new PurchaseOrderLine(
+                        draft.ProductId,
+                        draft.ProductSku,
+                        draft.ProductName,
+                        draft.OrderedQuantity,
+                        draft.UnitPrice));
+                }
+            }
+
+            _ = replacements.Sum(line => line.LineTotal);
+
+            _lines.Clear();
+            _lines.AddRange(replacements);
+        }
+
         public void RemoveLine(Guid lineId)
         {
             EnsureDraft();
@@ -232,7 +291,7 @@ namespace StockFlow.Domain.Entities
             Status = PurchaseOrderStatus.PendingApproval;
         }
 
-        public void Approve(DateTimeOffset approvedAt)
+        public void Approve(DateTimeOffset approvedAt, Guid approvedByUserId)
         {
             if (Status != PurchaseOrderStatus.PendingApproval)
             {
@@ -265,11 +324,18 @@ namespace StockFlow.Domain.Entities
                     "Approval timestamp must not precede submission.");
             }
 
+            if (approvedByUserId == Guid.Empty)
+            {
+                throw new ArgumentException(
+                    "Approver ID must not be empty.", nameof(approvedByUserId));
+            }
+
             ApprovedAt = approvedAt;
+            ApprovedByUserId = approvedByUserId;
             Status = PurchaseOrderStatus.Approved;
         }
 
-        public void Reject(DateTimeOffset rejectedAt)
+        public void Reject(DateTimeOffset rejectedAt, Guid rejectedByUserId)
         {
             if (Status != PurchaseOrderStatus.PendingApproval)
             {
@@ -302,7 +368,14 @@ namespace StockFlow.Domain.Entities
                     "Rejection timestamp must not precede submission.");
             }
 
+            if (rejectedByUserId == Guid.Empty)
+            {
+                throw new ArgumentException(
+                    "Rejecting user ID must not be empty.", nameof(rejectedByUserId));
+            }
+
             RejectedAt = rejectedAt;
+            RejectedByUserId = rejectedByUserId;
             Status = PurchaseOrderStatus.Rejected;
         }
 

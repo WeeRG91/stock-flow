@@ -1,5 +1,6 @@
 import {
   Boxes,
+  ClipboardList,
   LayoutDashboard,
   Package,
   Truck,
@@ -13,9 +14,18 @@ const navigationItems = [
   { to: "/products", label: "Products", icon: Package },
   { to: "/warehouses", label: "Warehouses", icon: Warehouse },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
+  { to: "/purchase-orders", label: "Purchase Orders", icon: ClipboardList },
 ];
 
-export function AppNavigation() {
+export function AppNavigation({
+  canReadPurchaseOrders,
+}: {
+  canReadPurchaseOrders: boolean
+}) {
+  const visibleItems = canReadPurchaseOrders
+    ? navigationItems
+    : navigationItems.filter(({ to }) => to !== "/purchase-orders");
+
   return (
     <nav aria-label="Main navigation">
       <p className="mb-3 px-3 text-xs font-semibold tracking-wide text-muted-foreground">
@@ -23,7 +33,7 @@ export function AppNavigation() {
       </p>
 
       <ul className="space-y-1.5">
-        {navigationItems.map(({ to, label, icon: Icon }) => (
+        {visibleItems.map(({ to, label, icon: Icon }) => (
           <li key={to}>
             <NavLink
               to={to}
