@@ -22,6 +22,48 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.GoodsReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConfirmedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.ToTable("GoodsReceipts", (string)null);
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.GoodsReceiptLine", b =>
+                {
+                    b.Property<Guid>("GoodsReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PurchaseOrderLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReceivedQuantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("GoodsReceiptId", "PurchaseOrderLineId");
+
+                    b.HasIndex("PurchaseOrderLineId");
+
+                    b.ToTable("GoodsReceiptLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_GoodsReceiptLines_ReceivedQuantity_Positive", "\"ReceivedQuantity\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.Inventory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -210,6 +252,9 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PurchaseOrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("ReceivedQuantity")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("numeric");
 
@@ -224,6 +269,8 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("PurchaseOrderLines", null, t =>
                         {
                             t.HasCheckConstraint("CK_PurchaseOrderLines_OrderedQuantity_Positive", "\"OrderedQuantity\" > 0");
+
+                            t.HasCheckConstraint("CK_PurchaseOrderLines_ReceivedQuantity_Valid", "\"ReceivedQuantity\" >= 0 AND \"ReceivedQuantity\" <= \"OrderedQuantity\"");
 
                             t.HasCheckConstraint("CK_PurchaseOrderLines_UnitPrice_Valid", "\"UnitPrice\" >= 0 AND \"UnitPrice\" <= 79228162514264337593543950335 AND \"UnitPrice\" = round(\"UnitPrice\", 2)");
                         });
@@ -330,6 +377,30 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("Warehouses", (string)null);
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.GoodsReceipt", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.GoodsReceiptLine", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.GoodsReceipt", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("GoodsReceiptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockFlow.Domain.Entities.PurchaseOrderLine", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.Inventory", b =>
                 {
                     b.HasOne("StockFlow.Domain.Entities.Product", null)
@@ -391,6 +462,11 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         .HasForeignKey("InventoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.GoodsReceipt", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("StockFlow.Domain.Entities.PurchaseOrder", b =>

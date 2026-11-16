@@ -1,5 +1,7 @@
 import { apiRequest } from "@/lib/apiClient";
 import type {
+  ConfirmGoodsReceiptRequest,
+  ConfirmGoodsReceiptResult,
   CreatePurchaseOrderRequest,
   CreatePurchaseOrderResult,
   GetPurchaseOrdersResult,
@@ -86,6 +88,20 @@ export function decidePurchaseOrder(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ expectedVersion }),
+    },
+  );
+}
+
+export function confirmGoodsReceipt(
+  orderId: string,
+  request: ConfirmGoodsReceiptRequest,
+): Promise<ConfirmGoodsReceiptResult> {
+  return apiRequest<ConfirmGoodsReceiptResult>(
+    `/api/purchase-orders/${encodeURIComponent(orderId)}/receipts`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
     },
   );
 }

@@ -379,6 +379,63 @@ namespace StockFlow.Domain.Entities
             Status = PurchaseOrderStatus.Rejected;
         }
 
+        public void ApplyReceipt(GoodsReceipt receipt)
+        {
+            ArgumentNullException.ThrowIfNull(receipt);
+
+            if (receipt.PurchaseOrderId != Id)
+            {
+                throw new ArgumentException(
+                    "The receipt belongs to a different purchase order.",
+                    nameof(receipt));
+            }
+
+            if (Status is not (PurchaseOrderStatus.Approved or PurchaseOrderStatus.PartiallyReceived))
+            {
+                throw new InvalidOperationException(
+                    "Only approved or partially received purchase orders can receive goods.");
+            }
+
+            var approvedAt = ApprovedAt
+               ?? throw new InvalidOperationException(
+                   "A purchase order must have an approval timestamp before receiving.");
+
+            if (receipt.ConfirmedAt < approvedAt)
+            {
+                throw new ArgumentException(
+                    "Receipt confirmation must not precede order approval.",
+                    nameof(receipt));
+            }
+
+            var orderLinesById = _lines.ToDictionary(line => line.Id);
+
+            foreach (var receiptLine in receipt.Lines)
+            {
+                if (!orderLinesById.TryGetValue(receiptLine.PurchaseOrderLineId, out var orderLine))
+                {
+                    throw new ArgumentException(
+                        "Every receipt line must reference a line on this purchase order.",
+                        nameof(receipt));
+                }
+
+                if (receiptLine.ReceivedQuantity > orderLine.RemainingQuantity)
+                {
+                    throw new InvalidOperationException(
+                        "Received quantity exceeds the remaining ordered quantity.");
+                }
+            }
+
+            foreach (var receiptLine in receipt.Lines)
+            {
+                orderLinesById[receiptLine.PurchaseOrderLineId]
+                    .RecordReceivedQuantity(receiptLine.ReceivedQuantity);
+            }
+
+            Status = _lines.All(line => line.RemainingQuantity == 0)
+                ? PurchaseOrderStatus.Received
+                : PurchaseOrderStatus.PartiallyReceived;
+        }
+
         private void EnsureDraft()
         {
             if (Status != PurchaseOrderStatus.Draft)

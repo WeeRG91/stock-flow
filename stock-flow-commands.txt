@@ -37,6 +37,8 @@ verify the solution
 dotnet build StockFlow.slnx
 dotnet test StockFlow.slnx --no-build
 
+dotnet test tests/StockFlow.API.Tests/StockFlow.API.Tests.csproj --filter "FullyQualifiedName~ConfirmGoodsReceiptEndpointTests"
+
 tool manifest records this project’s tool version in .config/dotnet-tools.json
 dotnet new tool-manifest
 dotnet tool install dotnet-ef --version 10.0.4
@@ -131,3 +133,57 @@ Trust the local .NET development certificate
 dotnet dev-certs https --trust
 
 dotnet run --project src/StockFlow.API --launch-profile https
+
+$previousStockFlowConnection = $env:STOCKFLOW_DEV_CONNECTION_STRING
+
+try {
+    $env:STOCKFLOW_DEV_CONNECTION_STRING = "Host=localhost;Database=stockflow_model_scaffold"
+
+    dotnet ef migrations add AddGoodsReceipts `
+        --context StockFlowDbContext `
+        --project src/StockFlow.Infrastructure `
+        --startup-project src/StockFlow.Infrastructure `
+        --output-dir Persistence/Migrations
+}
+finally {
+    $env:STOCKFLOW_DEV_CONNECTION_STRING = $previousStockFlowConnection
+}
+
+$previousStockFlowConnection = $env:STOCKFLOW_DEV_CONNECTION_STRING
+$stockFlowSecretPrefix = "ConnectionStrings:StockFlow = "
+
+try {
+    $stockFlowSecretEntry = dotnet user-secrets list --project src/StockFlow.API |
+        Where-Object { $_.StartsWith($stockFlowSecretPrefix) } |
+        Select-Object -First 1
+
+    if (-not $stockFlowSecretEntry) {
+        throw "The StockFlow connection string is missing from API user secrets."
+    }
+
+    $stockFlowSettings = [System.Data.Common.DbConnectionStringBuilder]::new()
+    $stockFlowSettings.set_ConnectionString(
+        $stockFlowSecretEntry.Substring($stockFlowSecretPrefix.Length))
+
+    [object]$stockFlowDatabase = $null
+    [object]$stockFlowHost = $null
+
+    if (-not $stockFlowSettings.TryGetValue("Database", [ref]$stockFlowDatabase) -or
+        [string]$stockFlowDatabase -cne "stockflow_dev" -or
+        -not $stockFlowSettings.TryGetValue("Host", [ref]$stockFlowHost) -or
+        [string]$stockFlowHost -notin @("localhost", "127.0.0.1", "::1")) {
+        throw "Expected a connection to the local stockflow_dev database."
+    }
+
+    $env:STOCKFLOW_DEV_CONNECTION_STRING =
+        $stockFlowSecretEntry.Substring($stockFlowSecretPrefix.Length)
+
+    dotnet ef database update AddGoodsReceipts `
+        --context StockFlowDbContext `
+        --project src/StockFlow.Infrastructure `
+        --startup-project src/StockFlow.Infrastructure
+}
+finally {
+    $env:STOCKFLOW_DEV_CONNECTION_STRING = $previousStockFlowConnection
+    Remove-Variable stockFlowSecretEntry, stockFlowSettings -ErrorAction SilentlyContinue
+}

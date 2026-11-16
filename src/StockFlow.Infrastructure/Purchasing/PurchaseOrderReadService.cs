@@ -47,7 +47,10 @@ namespace StockFlow.Infrastructure.Purchasing
                             line.ProductSku,
                             line.ProductName,
                             line.OrderedQuantity,
-                            line.UnitPrice))
+                            line.UnitPrice)
+                        {
+                            ReceivedQuantity = line.ReceivedQuantity
+                        })
                         .ToList())
                 {
                     ApprovedByUserId = order.ApprovedByUserId,

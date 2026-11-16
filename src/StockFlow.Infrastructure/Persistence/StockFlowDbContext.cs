@@ -13,6 +13,7 @@ namespace StockFlow.Infrastructure.Persistence
         public DbSet<LowStockAlert> LowStockAlerts => Set<LowStockAlert>();
         public DbSet<Supplier> Suppliers => Set<Supplier>();
         public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+        public DbSet<GoodsReceipt> GoodsReceipts => Set<GoodsReceipt>();
 
         public StockFlowDbContext(
             DbContextOptions<StockFlowDbContext> options)

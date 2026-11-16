@@ -81,6 +81,7 @@ namespace StockFlow.Infrastructure
             services.AddSingleton<IPurchaseOrderNumberGenerator, GuidPurchaseOrderNumberGenerator>();
             services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
             services.AddScoped<IPurchaseOrderReadService, PurchaseOrderReadService>();
+            services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
 
             return services;
         }

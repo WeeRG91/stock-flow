@@ -9,5 +9,7 @@
         decimal UnitPrice)
     {
         public decimal LineTotal => checked(OrderedQuantity * UnitPrice);
+        public int ReceivedQuantity { get; init; }
+        public int RemainingQuantity => OrderedQuantity - ReceivedQuantity;
     }
 }

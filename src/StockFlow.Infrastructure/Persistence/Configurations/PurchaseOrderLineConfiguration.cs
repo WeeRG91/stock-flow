@@ -19,6 +19,10 @@ namespace StockFlow.Infrastructure.Persistence.Configurations
                     "\"UnitPrice\" >= 0 AND " +
                     "\"UnitPrice\" <= 79228162514264337593543950335 AND " +
                     "\"UnitPrice\" = round(\"UnitPrice\", 2)");
+
+                table.HasCheckConstraint(
+                    "CK_PurchaseOrderLines_ReceivedQuantity_Valid",
+                    "\"ReceivedQuantity\" >= 0 AND \"ReceivedQuantity\" <= \"OrderedQuantity\"");
             });
 
             builder.HasKey(line => line.Id);
@@ -31,12 +35,13 @@ namespace StockFlow.Infrastructure.Persistence.Configurations
             builder.Property(line => line.ProductSku).IsRequired();
             builder.Property(line => line.ProductName).IsRequired();
             builder.Property(line => line.OrderedQuantity).IsRequired();
-
+            builder.Property(line => line.ReceivedQuantity).IsRequired();
             builder.Property(line => line.UnitPrice)
                 .HasColumnType("numeric")
                 .IsRequired();
 
             builder.Ignore(line => line.LineTotal);
+            builder.Ignore(line => line.RemainingQuantity);
 
             builder.HasOne<Product>()
                 .WithMany()

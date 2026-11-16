@@ -54,6 +54,14 @@ namespace StockFlow.Infrastructure.Tests
             Assert.Equal(
                 "PurchaseOrderLines",
                 model.FindEntityType(typeof(PurchaseOrderLine))!.GetTableName());
+
+            Assert.Equal(
+                "GoodsReceipts",
+                model.FindEntityType(typeof(GoodsReceipt))!.GetTableName());
+
+            Assert.Equal(
+                "GoodsReceiptLines",
+                model.FindEntityType(typeof(GoodsReceiptLine))!.GetTableName());
         }
 
         [Fact]

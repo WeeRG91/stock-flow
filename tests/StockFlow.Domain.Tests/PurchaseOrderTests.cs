@@ -482,6 +482,138 @@ public class PurchaseOrderTests
         Assert.Empty(view);
     }
 
+    [Theory]
+    [InlineData(1, PurchaseOrderStatus.PartiallyReceived)]
+    [InlineData(2, PurchaseOrderStatus.Received)]
+    public void ApplyReceipt_WithFirstDelivery_UpdatesQuantityAndStatus(
+        int quantity,
+        PurchaseOrderStatus expectedStatus)
+    {
+        var order = CreateOrderInState(PurchaseOrderStatus.Approved);
+        var line = Assert.Single(order.Lines);
+
+        order.ApplyReceipt(CreateReceipt(order, new GoodsReceiptLine(line.Id, quantity)));
+
+        Assert.Equal(quantity, line.ReceivedQuantity);
+        Assert.Equal(2 - quantity, line.RemainingQuantity);
+        Assert.Equal(expectedStatus, order.Status);
+    }
+
+    [Fact]
+    public void ApplyReceipt_WithMultiplePartialDeliveries_CompletesOnlyWhenAllLinesAreFilled()
+    {
+        var order = CreateOrder();
+        order.AddLine(Guid.NewGuid(), "CHAIR", "Office chair", 2, 25m);
+        order.AddLine(Guid.NewGuid(), "DESK", "Office desk", 3, 50m);
+        order.Submit(CreatedAt.AddMinutes(1));
+        order.Approve(CreatedAt.AddMinutes(2), DecisionUserId);
+        var chair = order.Lines[0];
+        var desk = order.Lines[1];
+
+        order.ApplyReceipt(CreateReceipt(order, new GoodsReceiptLine(chair.Id, 2)));
+
+        Assert.Equal(0, chair.RemainingQuantity);
+        Assert.Equal(3, desk.RemainingQuantity);
+        Assert.Equal(PurchaseOrderStatus.PartiallyReceived, order.Status);
+
+        order.ApplyReceipt(CreateReceipt(order, new GoodsReceiptLine(desk.Id, 1)));
+
+        Assert.Equal(1, desk.ReceivedQuantity);
+        Assert.Equal(PurchaseOrderStatus.PartiallyReceived, order.Status);
+
+        order.ApplyReceipt(CreateReceipt(order, new GoodsReceiptLine(desk.Id, 2)));
+
+        Assert.Equal(3, desk.ReceivedQuantity);
+        Assert.All(order.Lines, line => Assert.Equal(0, line.RemainingQuantity));
+        Assert.Equal(PurchaseOrderStatus.Received, order.Status);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ApplyReceipt_WhenSecondLineIsInvalid_PreservesAllQuantitiesAndStatus(
+        bool exceedsRemaining)
+    {
+        var order = CreateOrder();
+        order.AddLine(Guid.NewGuid(), "CHAIR", "Office chair", 2, 25m);
+        order.AddLine(Guid.NewGuid(), "DESK", "Office desk", 2, 50m);
+        order.Submit(CreatedAt.AddMinutes(1));
+        order.Approve(CreatedAt.AddMinutes(2), DecisionUserId);
+        var chair = order.Lines[0];
+        var desk = order.Lines[1];
+        order.ApplyReceipt(CreateReceipt(order, new GoodsReceiptLine(desk.Id, 1)));
+        var invalidLine = exceedsRemaining
+            ? new GoodsReceiptLine(desk.Id, 2)
+            : new GoodsReceiptLine(Guid.NewGuid(), 1);
+        var receipt = CreateReceipt(order, new GoodsReceiptLine(chair.Id, 1), invalidLine);
+
+        if (exceedsRemaining)
+        {
+            Assert.Throws<InvalidOperationException>(() => order.ApplyReceipt(receipt));
+        }
+        else
+        {
+            Assert.Throws<ArgumentException>("receipt", () => order.ApplyReceipt(receipt));
+        }
+
+        Assert.Equal(0, chair.ReceivedQuantity);
+        Assert.Equal(2, chair.RemainingQuantity);
+        Assert.Equal(1, desk.ReceivedQuantity);
+        Assert.Equal(1, desk.RemainingQuantity);
+        Assert.Equal(PurchaseOrderStatus.PartiallyReceived, order.Status);
+    }
+
+    [Theory]
+    [InlineData(PurchaseOrderStatus.Draft)]
+    [InlineData(PurchaseOrderStatus.PendingApproval)]
+    [InlineData(PurchaseOrderStatus.Rejected)]
+    [InlineData(PurchaseOrderStatus.Received)]
+    public void ApplyReceipt_WithIneligibleStatus_PreservesOrder(PurchaseOrderStatus status)
+    {
+        var order = CreateOrderInState(
+            status == PurchaseOrderStatus.Received ? PurchaseOrderStatus.Approved : status);
+        var line = Assert.Single(order.Lines);
+        if (status == PurchaseOrderStatus.Received)
+        {
+            order.ApplyReceipt(CreateReceipt(order, new GoodsReceiptLine(line.Id, 2)));
+        }
+
+        var receivedBefore = line.ReceivedQuantity;
+        var receipt = CreateReceipt(order, new GoodsReceiptLine(line.Id, 1));
+
+        Assert.Throws<InvalidOperationException>(() => order.ApplyReceipt(receipt));
+
+        Assert.Equal(receivedBefore, line.ReceivedQuantity);
+        Assert.Equal(status, order.Status);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ApplyReceipt_WithWrongOrderOrConfirmationBeforeApproval_PreservesOrder(
+        bool wrongOrder)
+    {
+        var order = CreateOrderInState(PurchaseOrderStatus.Approved);
+        var line = Assert.Single(order.Lines);
+        var receipt = new GoodsReceipt(
+            Guid.NewGuid(),
+            wrongOrder ? Guid.NewGuid() : order.Id,
+            CreatedAt.AddMinutes(wrongOrder ? 3 : 1),
+            CreatorId,
+            new[] { new GoodsReceiptLine(line.Id, 1) });
+
+        Assert.Throws<ArgumentException>("receipt", () => order.ApplyReceipt(receipt));
+
+        Assert.Equal(0, line.ReceivedQuantity);
+        Assert.Equal(PurchaseOrderStatus.Approved, order.Status);
+    }
+
+    private static GoodsReceipt CreateReceipt(PurchaseOrder order, params GoodsReceiptLine[] lines)
+    {
+        return new GoodsReceipt(
+            Guid.NewGuid(), order.Id, CreatedAt.AddMinutes(3), CreatorId, lines);
+    }
+
     private static PurchaseOrder CreateOrderInState(
     PurchaseOrderStatus status)
     {

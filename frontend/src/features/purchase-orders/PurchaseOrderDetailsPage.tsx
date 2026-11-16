@@ -11,6 +11,7 @@ import { useState } from "react";
 import { usePermissions } from "../auth/usePermissions";
 import { useSubmitPurchaseOrder } from "./useSubmitPurchaseOrder";
 import { useDecidePurchaseOrder } from "./useDecidePurchaseOrder";
+import { ConfirmGoodsReceiptForm } from "./ConfirmGoodsReceiptForm";
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
   1: "Draft",
@@ -83,6 +84,10 @@ export function PurchaseOrderDetailsPage() {
           </dl>
 
           <PurchaseOrderLines order={query.data} />
+
+          {can("Inventory.Receive") && [3, 5, 6].includes(query.data.status) && (
+            <ConfirmGoodsReceiptForm key={query.data.id} order={query.data} />
+          )}
 
           {query.data?.status === 1 && can("PurchaseOrders.Manage") && (
             <DraftLineEditor key={query.data.id} order={query.data} />
@@ -213,6 +218,10 @@ function PurchaseOrderLines({ order }: { order: PurchaseOrderDetailsDto }) {
                   {line.productSku} · {line.orderedQuantity} ×{" "}
                   {currency.format(line.unitPrice)}
                 </p>
+                <p className="text-sm text-muted-foreground">
+                  {line.receivedQuantity} received · {line.remainingQuantity}{" "}
+                  remaining
+                </p>
               </div>
               <p className="font-medium">{currency.format(line.lineTotal)}</p>
             </li>
@@ -243,7 +252,10 @@ function PurchaseOrderDecision({
           type="button"
           disabled={isCreator || mutation.isPending}
           onClick={() =>
-            mutation.mutate({ decision: "approve", expectedVersion: order.version })
+            mutation.mutate({
+              decision: "approve",
+              expectedVersion: order.version,
+            })
           }
         >
           Approve
@@ -253,7 +265,10 @@ function PurchaseOrderDecision({
           variant="outline"
           disabled={mutation.isPending}
           onClick={() =>
-            mutation.mutate({ decision: "reject", expectedVersion: order.version })
+            mutation.mutate({
+              decision: "reject",
+              expectedVersion: order.version,
+            })
           }
         >
           Reject

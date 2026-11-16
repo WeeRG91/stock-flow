@@ -163,6 +163,8 @@ export interface PurchaseOrderLineDto {
   orderedQuantity: number;
   unitPrice: number;
   lineTotal: number;
+  receivedQuantity: number;
+  remainingQuantity: number;
 }
 
 export interface PurchaseOrderDetailsDto {
@@ -191,4 +193,23 @@ export interface PurchaseOrderDetailsDto {
 export interface UpdateDraftPurchaseOrderRequest {
   expectedVersion: string;
   lines: CreatePurchaseOrderLineRequest[];
+}
+
+export interface GoodsReceiptLineDto {
+  purchaseOrderLineId: string;
+  receivedQuantity: number;
+}
+
+export interface ConfirmGoodsReceiptRequest {
+  receiptId: string;
+  expectedVersion: string;
+  lines: GoodsReceiptLineDto[];
+}
+
+export interface ConfirmGoodsReceiptResult {
+  receiptId: string;
+  purchaseOrderId: string;
+  confirmedAt: string;
+  confirmedByUserId: string;
+  lines: GoodsReceiptLineDto[];
 }

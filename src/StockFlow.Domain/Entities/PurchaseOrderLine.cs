@@ -7,6 +7,8 @@
         public string ProductSku { get; }
         public string ProductName { get; }
         public int OrderedQuantity { get; }
+        public int ReceivedQuantity { get; private set; }
+        public int RemainingQuantity => OrderedQuantity - ReceivedQuantity;
         public decimal UnitPrice { get; }
         public decimal LineTotal => checked(OrderedQuantity * UnitPrice);
 
@@ -36,6 +38,24 @@
                 ProductName,
                 orderedQuantity,
                 unitPrice);
+        }
+
+        internal void RecordReceivedQuantity(int quantity)
+        {
+            if (quantity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(quantity),
+                    "Received quantity must be greater than zero.");
+            }
+
+            if (quantity > RemainingQuantity)
+            {
+                throw new InvalidOperationException(
+                    "Received quantity exceeds the remaining ordered quantity.");
+            }
+
+            ReceivedQuantity += quantity;
         }
 
         private PurchaseOrderLine(
