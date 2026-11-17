@@ -54,6 +54,13 @@ namespace StockFlow.Application.PurchaseOrders.GetPurchaseOrders
                     "Page size must be between 1 and 100.");
             }
 
+            if (query.Status is { } status && !Enum.IsDefined(status))
+            {
+                throw new RequestValidationException(
+                    nameof(query.Status),
+                    "Select a valid purchase order status.");
+            }
+
             var offset = ((long)query.PageNumber - 1) * query.PageSize;
 
             if (offset > int.MaxValue)
@@ -63,8 +70,12 @@ namespace StockFlow.Application.PurchaseOrders.GetPurchaseOrders
                     "The requested page is beyond the supported range.");
             }
 
+            var search = string.IsNullOrWhiteSpace(query.Search)
+                ? null
+                : query.Search.Trim();
+
             return await _orders.GetPageAsync(
-                query.PageNumber, query.PageSize, cancellationToken);
+                query.PageNumber, query.PageSize, query.Status, search, cancellationToken);
         }
     }
 }

@@ -11,6 +11,7 @@ using StockFlow.Application.Abstractions;
 using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Authorization;
 using StockFlow.Application.GoodsReceipts.ConfirmGoodsReceipt;
+using StockFlow.Application.GoodsReceipts.GetGoodsReceipts;
 using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Inventory.MonitorLowStock;
 using StockFlow.Application.Inventory.ReceiveStock;
@@ -66,6 +67,7 @@ builder.Services.AddScoped<SubmitPurchaseOrderCommandHandler>();
 builder.Services.AddScoped<ApprovePurchaseOrderCommandHandler>();
 builder.Services.AddScoped<RejectPurchaseOrderCommandHandler>();
 builder.Services.AddScoped<ConfirmGoodsReceiptCommandHandler>();
+builder.Services.AddScoped<GetGoodsReceiptQueryHandler>();
 
 builder.Services.AddScoped<IInventoryChangeNotifier, SignalRInventoryChangeNotifier>();
 

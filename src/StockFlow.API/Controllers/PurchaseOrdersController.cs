@@ -10,6 +10,7 @@ using StockFlow.Application.PurchaseOrders.GetPurchaseOrders;
 using StockFlow.Application.PurchaseOrders.RejectPurchaseOrder;
 using StockFlow.Application.PurchaseOrders.SubmitPurchaseOrder;
 using StockFlow.Application.PurchaseOrders.UpdateDraftPurchaseOrder;
+using StockFlow.Domain.Enums;
 
 namespace StockFlow.API.Controllers
 {
@@ -117,10 +118,12 @@ namespace StockFlow.API.Controllers
         public async Task<ActionResult<GetPurchaseOrdersResult>> GetPage(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 20,
+            [FromQuery] PurchaseOrderStatus? status = null,
+            [FromQuery] string? search = null,
             CancellationToken cancellationToken = default)
         {
             var result = await _listHandler.HandleAsync(
-                new GetPurchaseOrdersQuery(pageNumber, pageSize),
+                new GetPurchaseOrdersQuery(pageNumber, pageSize, status, search),
                 cancellationToken);
 
             return Ok(result);

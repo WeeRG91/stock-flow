@@ -18,6 +18,9 @@ export function useConfirmGoodsReceipt(orderId: string) {
           queryKey: ["purchase-orders", "list"],
         }),
         queryClient.invalidateQueries({ queryKey: ["inventory"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["purchase-orders", "receipt-history", orderId],
+        }),
       ]);
     },
   });

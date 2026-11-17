@@ -213,3 +213,9 @@ export interface ConfirmGoodsReceiptResult {
   confirmedByUserId: string;
   lines: GoodsReceiptLineDto[];
 }
+
+export interface GoodsReceiptHistoryItemDto {
+  receiptId: string;
+  confirmedAt: string;
+  lines: GoodsReceiptLineDto[];
+}

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using StockFlow.Application.Authorization;
 using StockFlow.Application.PurchaseOrders;
 using StockFlow.Application.PurchaseOrders.GetPurchaseOrders;
+using StockFlow.Domain.Enums;
 
 namespace StockFlow.API.Tests;
 
@@ -15,12 +16,17 @@ public class GetPurchaseOrdersEndpointTests
     private const string Endpoint = "/api/purchase-orders";
 
     [Theory]
-    [InlineData("", 1, 20)]
-    [InlineData("?pageNumber=2&pageSize=10", 2, 10)]
-    public async Task GetPage_AsViewer_UsesRequestedPaging(
+    [InlineData("", 1, 20, null, null)]
+    [InlineData("?pageNumber=2&pageSize=10", 2, 10, null, null)]
+    [InlineData("?pageNumber=2&pageSize=10&status=3", 2, 10, PurchaseOrderStatus.Approved, null)]
+    [InlineData("?status=6&search=%20demo-office%20", 1, 20, PurchaseOrderStatus.Received, "demo-office")]
+    [InlineData("?search=%20%20", 1, 20, null, null)]
+    public async Task GetPage_AsViewer_PassesPagingAndFiltersToReadService(
         string queryString,
         int pageNumber,
-        int pageSize)
+        int pageSize,
+        PurchaseOrderStatus? expectedStatus,
+        string? expectedSearch)
     {
         using var factory = new StockFlowApiFactory();
         factory.User.Roles = [StockFlowRoles.Viewer];
@@ -38,6 +44,8 @@ public class GetPurchaseOrdersEndpointTests
 
         Assert.NotNull(result);
         Assert.Equal((pageNumber, pageSize), reader.RequestedPage.GetValueOrDefault());
+        Assert.Equal(expectedStatus, reader.RequestedStatus);
+        Assert.Equal(expectedSearch, reader.RequestedSearch);
         Assert.Equal(pageNumber, result.PageNumber);
         Assert.Equal(pageSize, result.PageSize);
         Assert.Equal(42, result.TotalCount);
@@ -50,7 +58,9 @@ public class GetPurchaseOrdersEndpointTests
     [InlineData("?pageSize=101")]
     [InlineData("?pageNumber=2147483647&pageSize=2")]
     [InlineData("?pageNumber=abc")]
-    public async Task GetPage_WithInvalidPaging_SkipsReadService(string queryString)
+    [InlineData("?status=99")]
+    [InlineData("?status=unknown")]
+    public async Task GetPage_WithInvalidQuery_SkipsReadService(string queryString)
     {
         using var factory = new StockFlowApiFactory();
         var reader = new RecordingOrderPageReader();
@@ -101,6 +111,8 @@ public class GetPurchaseOrdersEndpointTests
     private sealed class RecordingOrderPageReader : IPurchaseOrderReadService
     {
         public (int PageNumber, int PageSize)? RequestedPage { get; private set; }
+        public PurchaseOrderStatus? RequestedStatus { get; private set; }
+        public string? RequestedSearch { get; private set; }
 
         public Task<PurchaseOrderDetailsDto?> GetByIdAsync(
             Guid purchaseOrderId,
@@ -112,10 +124,14 @@ public class GetPurchaseOrdersEndpointTests
         public Task<GetPurchaseOrdersResult> GetPageAsync(
             int pageNumber,
             int pageSize,
+            PurchaseOrderStatus? status,
+            string? search,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             RequestedPage = (pageNumber, pageSize);
+            RequestedStatus = status;
+            RequestedSearch = search;
 
             return Task.FromResult(
                 new GetPurchaseOrdersResult([], pageNumber, pageSize, 42));

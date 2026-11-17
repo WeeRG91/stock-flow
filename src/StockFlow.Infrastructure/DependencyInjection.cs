@@ -5,6 +5,7 @@ using StockFlow.Application.Abstractions.Authentication;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Purchasing;
 using StockFlow.Application.Abstractions.Time;
+using StockFlow.Application.GoodsReceipts;
 using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Inventory.MonitorLowStock;
 using StockFlow.Application.Products.GetProducts;
@@ -82,6 +83,7 @@ namespace StockFlow.Infrastructure
             services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
             services.AddScoped<IPurchaseOrderReadService, PurchaseOrderReadService>();
             services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
+            services.AddScoped<IGoodsReceiptReadService, GoodsReceiptReadService>();
 
             return services;
         }

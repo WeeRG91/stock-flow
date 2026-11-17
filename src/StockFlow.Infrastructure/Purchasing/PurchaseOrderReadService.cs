@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using StockFlow.Application.PurchaseOrders;
 using StockFlow.Application.PurchaseOrders.GetPurchaseOrders;
+using StockFlow.Domain.Enums;
 using StockFlow.Infrastructure.Persistence;
 
 namespace StockFlow.Infrastructure.Purchasing
@@ -62,9 +63,32 @@ namespace StockFlow.Infrastructure.Purchasing
         public async Task<GetPurchaseOrdersResult> GetPageAsync(
             int pageNumber,
             int pageSize,
+            PurchaseOrderStatus? status,
+            string? search,
             CancellationToken cancellationToken = default)
         {
             var orders = _context.PurchaseOrders.AsNoTracking();
+
+            if (status is { } selectedStatus)
+            {
+                orders = orders.Where(order => order.Status == selectedStatus);
+            }
+
+            if (search is not null)
+            {
+                var escapedSearch = search
+                    .Replace("\\", "\\\\")
+                    .Replace("%", "\\%")
+                    .Replace("_", "\\_");
+
+                var pattern = $"%{escapedSearch}%";
+
+                orders = orders.Where(order =>
+                    EF.Functions.ILike(order.OrderNumber, pattern, "\\") ||
+                    EF.Functions.ILike(order.SupplierCode, pattern, "\\") ||
+                    EF.Functions.ILike(order.SupplierName, pattern, "\\"));
+            }
+
             var offset = checked((int)(((long)pageNumber - 1) * pageSize));
 
             var totalCount = await orders.CountAsync(cancellationToken);

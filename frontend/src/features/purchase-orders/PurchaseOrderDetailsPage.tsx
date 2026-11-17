@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError } from "@/lib/ApiError";
-import type { PurchaseOrderDetailsDto, PurchaseOrderStatus } from "@/types/api";
+import type { PurchaseOrderDetailsDto } from "@/types/api";
 import { usePurchaseOrder } from "./usePurchaseOrder";
 import { useProducts } from "../products/useProducts";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,8 @@ import { usePermissions } from "../auth/usePermissions";
 import { useSubmitPurchaseOrder } from "./useSubmitPurchaseOrder";
 import { useDecidePurchaseOrder } from "./useDecidePurchaseOrder";
 import { ConfirmGoodsReceiptForm } from "./ConfirmGoodsReceiptForm";
-
-const statusLabels: Record<PurchaseOrderStatus, string> = {
-  1: "Draft",
-  2: "Pending approval",
-  3: "Approved",
-  4: "Rejected",
-  5: "Partially received",
-  6: "Received",
-};
+import { statusLabels } from "./PurchaseOrderStatus";
+import { GoodsReceiptHistory } from "./GoodsReceiptHistory";
 
 export function PurchaseOrderDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -88,6 +81,8 @@ export function PurchaseOrderDetailsPage() {
           {can("Inventory.Receive") && [3, 5, 6].includes(query.data.status) && (
             <ConfirmGoodsReceiptForm key={query.data.id} order={query.data} />
           )}
+
+          <GoodsReceiptHistory order={query.data} />
 
           {query.data?.status === 1 && can("PurchaseOrders.Manage") && (
             <DraftLineEditor key={query.data.id} order={query.data} />

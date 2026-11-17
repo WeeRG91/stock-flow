@@ -130,6 +130,8 @@ public class GetPurchaseOrderByIdEndpointTests
         public Task<GetPurchaseOrdersResult> GetPageAsync(
             int pageNumber,
             int pageSize,
+            PurchaseOrderStatus? status,
+            string? search,
             CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException(

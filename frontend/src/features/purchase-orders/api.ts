@@ -5,23 +5,35 @@ import type {
   CreatePurchaseOrderRequest,
   CreatePurchaseOrderResult,
   GetPurchaseOrdersResult,
+  GoodsReceiptHistoryItemDto,
   PurchaseOrderDetailsDto,
+  PurchaseOrderStatus,
   UpdateDraftPurchaseOrderRequest,
 } from "@/types/api";
 
 export interface GetPurchaseOrdersParameters {
   pageNumber: number;
   pageSize: number;
+  status?: PurchaseOrderStatus;
+  search?: string;
 }
 
 export function getPurchaseOrders(
-  { pageNumber, pageSize }: GetPurchaseOrdersParameters,
+  { pageNumber, pageSize, status, search }: GetPurchaseOrdersParameters,
   signal?: AbortSignal,
 ): Promise<GetPurchaseOrdersResult> {
   const query = new URLSearchParams({
     pageNumber: String(pageNumber),
     pageSize: String(pageSize),
   });
+
+  if (status !== undefined) {
+    query.set("status", String(status));
+  }
+
+  if (search) {
+    query.set("search", search);
+  }
 
   return apiRequest<GetPurchaseOrdersResult>(
     `/api/purchase-orders?${query.toString()}`,
@@ -103,5 +115,15 @@ export function confirmGoodsReceipt(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     },
+  );
+}
+
+export function getGoodsReceiptHistory(
+  orderId: string,
+  signal?: AbortSignal,
+): Promise<GoodsReceiptHistoryItemDto[]> {
+  return apiRequest<GoodsReceiptHistoryItemDto[]>(
+    `/api/purchase-orders/${encodeURIComponent(orderId)}/receipts`,
+    { signal },
   );
 }

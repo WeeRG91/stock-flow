@@ -1,4 +1,5 @@
 ﻿using StockFlow.Application.PurchaseOrders.GetPurchaseOrders;
+using StockFlow.Domain.Enums;
 
 namespace StockFlow.Application.PurchaseOrders
 {
@@ -11,6 +12,8 @@ namespace StockFlow.Application.PurchaseOrders
         Task<GetPurchaseOrdersResult> GetPageAsync(
             int pageNumber,
             int pageSize,
+            PurchaseOrderStatus? status,
+            string? search,
             CancellationToken cancellationToken = default);
     }
 }

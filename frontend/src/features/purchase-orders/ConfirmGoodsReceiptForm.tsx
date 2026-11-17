@@ -16,8 +16,13 @@ export function ConfirmGoodsReceiptForm({
 }) {
   const formId = useId();
   const [quantities, setQuantities] = useState<Record<string, string>>({});
-  const [attempt, setAttempt] = useState<ConfirmGoodsReceiptRequest | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState<ConfirmGoodsReceiptRequest | null>(
+    null,
+  );
+  const [validationError, setValidationError] = useState<{
+    message: string;
+    lineId?: string;
+  } | null>(null);
   const mutation = useConfirmGoodsReceipt(order.id);
   const openLines = order.lines.filter((line) => line.remainingQuantity > 0);
 
@@ -44,10 +49,16 @@ export function ConfirmGoodsReceiptForm({
       if (!entered) continue;
 
       const quantity = Number(entered);
-      if (!Number.isInteger(quantity) || quantity < 1 || quantity > line.remainingQuantity) {
-        setValidationError(
-          `Enter a whole number from 1 to ${line.remainingQuantity} for ${line.productName}.`,
-        );
+      if (
+        !Number.isInteger(quantity) ||
+        quantity < 1 ||
+        quantity > line.remainingQuantity
+      ) {
+        setValidationError({
+          lineId: line.id,
+          message: `Enter a whole number from 1 to ${line.remainingQuantity} for ${line.productName}.`,
+        });
+        document.getElementById(`${formId}-${line.id}`)?.focus();
         return;
       }
 
@@ -55,7 +66,9 @@ export function ConfirmGoodsReceiptForm({
     }
 
     if (lines.length === 0) {
-      setValidationError("Enter a quantity for at least one order line.");
+      setValidationError({
+        message: "Enter a quantity for at least one order line.",
+      });
       return;
     }
 
@@ -90,6 +103,10 @@ export function ConfirmGoodsReceiptForm({
       <fieldset disabled={attempt !== null} className="space-y-4">
         {openLines.map((line) => {
           const inputId = `${formId}-${line.id}`;
+          const lineError =
+            validationError?.lineId === line.id
+              ? validationError.message
+              : undefined;
 
           return (
             <div key={line.id} className="space-y-2">
@@ -102,23 +119,46 @@ export function ConfirmGoodsReceiptForm({
                 min={1}
                 max={line.remainingQuantity}
                 step={1}
-                aria-describedby={`${inputId}-remaining`}
+                aria-invalid={lineError ? true : undefined}
+                aria-describedby={
+                  lineError
+                    ? `${inputId}-remaining ${inputId}-error`
+                    : `${inputId}-remaining`
+                }
                 value={quantities[line.id] ?? ""}
                 onChange={(event) => {
+                  if (lineError) setValidationError(null);
                   const value = event.target.value;
-                  setQuantities((current) => ({ ...current, [line.id]: value }));
+                  setQuantities((current) => ({
+                    ...current,
+                    [line.id]: value,
+                  }));
                 }}
               />
-              <p id={`${inputId}-remaining`} className="text-sm text-muted-foreground">
+              <p
+                id={`${inputId}-remaining`}
+                className="text-sm text-muted-foreground"
+              >
                 {line.remainingQuantity} remaining
               </p>
+              {lineError && (
+                <p
+                  id={`${inputId}-error`}
+                  role="alert"
+                  className="text-sm text-destructive"
+                >
+                  {lineError}
+                </p>
+              )}
             </div>
           );
         })}
       </fieldset>
 
-      {validationError && (
-        <p role="alert" className="text-sm text-destructive">{validationError}</p>
+      {validationError && !validationError.lineId && (
+        <p role="alert" className="text-sm text-destructive">
+          {validationError.message}
+        </p>
       )}
 
       {mutation.isError && (
@@ -136,7 +176,10 @@ export function ConfirmGoodsReceiptForm({
           Retry confirmation
         </Button>
       ) : (
-        <Button type="submit" disabled={attempt !== null || openLines.length === 0}>
+        <Button
+          type="submit"
+          disabled={attempt !== null || openLines.length === 0}
+        >
           {mutation.isPending ? "Confirming…" : "Confirm delivery"}
         </Button>
       )}
