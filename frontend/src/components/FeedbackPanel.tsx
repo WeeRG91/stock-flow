@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 type FeedbackPanelProps = {
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   role?: "status" | "alert";
 };

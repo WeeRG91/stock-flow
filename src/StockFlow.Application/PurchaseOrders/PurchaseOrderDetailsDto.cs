@@ -24,5 +24,11 @@ namespace StockFlow.Application.PurchaseOrders
         public decimal TotalAmount => Lines.Sum(line => line.LineTotal);
         public Guid? ApprovedByUserId { get; init; }
         public Guid? RejectedByUserId { get; init; }
+        public DateOnly? ExpectedDeliveryDate { get; init; }
+        public OverduePurchaseOrderAlertDto? OverdueAlert { get; init; }
     }
+
+    public sealed record OverduePurchaseOrderAlertDto(
+    DateTimeOffset DetectedAt,
+    DateTimeOffset? ResolvedAt);
 }

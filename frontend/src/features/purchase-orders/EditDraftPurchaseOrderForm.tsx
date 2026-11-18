@@ -35,11 +35,14 @@ export function EditDraftPurchaseOrderForm({
   } = useForm<UpdateDraftPurchaseOrderFormValues>({
     resolver: zodResolver(updateDraftPurchaseOrderSchema),
     defaultValues: {
-      lines: originalOrder.lines.map(({ productId, orderedQuantity, unitPrice }) => ({
-        productId,
-        orderedQuantity,
-        unitPrice,
-      })),
+      expectedDeliveryDate: originalOrder.expectedDeliveryDate ?? "",
+      lines: originalOrder.lines.map(
+        ({ productId, orderedQuantity, unitPrice }) => ({
+          productId,
+          orderedQuantity,
+          unitPrice,
+        }),
+      ),
     },
   });
 
@@ -54,7 +57,11 @@ export function EditDraftPurchaseOrderForm({
     if (mutation.isPending) return;
 
     mutation.mutate(
-      { expectedVersion: originalOrder.version, lines: values.lines },
+      {
+        expectedVersion: originalOrder.version,
+        expectedDeliveryDate: values.expectedDeliveryDate || null,
+        lines: values.lines,
+      },
       { onSuccess: onSaved },
     );
   }
@@ -66,15 +73,49 @@ export function EditDraftPurchaseOrderForm({
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
-      <h2 id={`${formId}-heading`} className="font-semibold">Edit draft lines</h2>
+      <h2 id={`${formId}-heading`} className="font-semibold">
+        Edit draft
+      </h2>
+
+      <div className="max-w-xs space-y-2">
+        <Label htmlFor={`${formId}-delivery-date`}>
+          Expected delivery date
+        </Label>
+        <Input
+          id={`${formId}-delivery-date`}
+          type="date"
+          disabled={mutation.isPending}
+          aria-invalid={!!errors.expectedDeliveryDate}
+          aria-describedby={
+            errors.expectedDeliveryDate
+              ? `${formId}-delivery-date-error`
+              : undefined
+          }
+          {...register("expectedDeliveryDate")}
+        />
+        {errors.expectedDeliveryDate && (
+          <p
+            id={`${formId}-delivery-date-error`}
+            className="text-sm text-destructive"
+          >
+            Enter a valid date or leave the field blank.
+          </p>
+        )}
+      </div>
 
       {fields.map((field, index) => {
         const rowId = `${formId}-${field.id}`;
         const rowErrors = errors.lines?.[index];
 
         return (
-          <fieldset key={field.id} disabled={mutation.isPending} className="space-y-3 rounded-lg border p-4">
-            <legend className="px-1 text-sm font-medium">Line {index + 1}</legend>
+          <fieldset
+            key={field.id}
+            disabled={mutation.isPending}
+            className="space-y-3 rounded-lg border p-4"
+          >
+            <legend className="px-1 text-sm font-medium">
+              Line {index + 1}
+            </legend>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor={`${rowId}-product`}>Product</Label>
@@ -82,7 +123,9 @@ export function EditDraftPurchaseOrderForm({
                   id={`${rowId}-product`}
                   className="h-11 w-full rounded-lg border border-input bg-card px-3 text-sm"
                   aria-invalid={!!rowErrors?.productId}
-                  aria-describedby={rowErrors?.productId ? `${rowId}-product-error` : undefined}
+                  aria-describedby={
+                    rowErrors?.productId ? `${rowId}-product-error` : undefined
+                  }
                   {...register(`lines.${index}.productId`)}
                 >
                   <option value="">Select a product</option>
@@ -98,7 +141,10 @@ export function EditDraftPurchaseOrderForm({
                   ))}
                 </select>
                 {rowErrors?.productId && (
-                  <p id={`${rowId}-product-error`} className="text-sm text-destructive">
+                  <p
+                    id={`${rowId}-product-error`}
+                    className="text-sm text-destructive"
+                  >
                     {rowErrors.productId.message}
                   </p>
                 )}
@@ -112,35 +158,57 @@ export function EditDraftPurchaseOrderForm({
                   min={1}
                   step={1}
                   aria-invalid={!!rowErrors?.orderedQuantity}
-                  aria-describedby={rowErrors?.orderedQuantity ? `${rowId}-quantity-error` : undefined}
-                  {...register(`lines.${index}.orderedQuantity`, { valueAsNumber: true })}
+                  aria-describedby={
+                    rowErrors?.orderedQuantity
+                      ? `${rowId}-quantity-error`
+                      : undefined
+                  }
+                  {...register(`lines.${index}.orderedQuantity`, {
+                    valueAsNumber: true,
+                  })}
                 />
                 {rowErrors?.orderedQuantity && (
-                  <p id={`${rowId}-quantity-error`} className="text-sm text-destructive">
+                  <p
+                    id={`${rowId}-quantity-error`}
+                    className="text-sm text-destructive"
+                  >
                     {rowErrors.orderedQuantity.message}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor={`${rowId}-price`}>Unit price ({order.currency})</Label>
+                <Label htmlFor={`${rowId}-price`}>
+                  Unit price ({order.currency})
+                </Label>
                 <Input
                   id={`${rowId}-price`}
                   type="number"
                   min={0}
                   step="0.01"
                   aria-invalid={!!rowErrors?.unitPrice}
-                  aria-describedby={rowErrors?.unitPrice ? `${rowId}-price-error` : undefined}
-                  {...register(`lines.${index}.unitPrice`, { valueAsNumber: true })}
+                  aria-describedby={
+                    rowErrors?.unitPrice ? `${rowId}-price-error` : undefined
+                  }
+                  {...register(`lines.${index}.unitPrice`, {
+                    valueAsNumber: true,
+                  })}
                 />
                 {rowErrors?.unitPrice && (
-                  <p id={`${rowId}-price-error`} className="text-sm text-destructive">
+                  <p
+                    id={`${rowId}-price-error`}
+                    className="text-sm text-destructive"
+                  >
                     {rowErrors.unitPrice.message}
                   </p>
                 )}
               </div>
             </div>
-            <Button type="button" variant="outline" onClick={() => remove(index)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => remove(index)}
+            >
               Remove line {index + 1}
             </Button>
           </fieldset>
@@ -160,7 +228,9 @@ export function EditDraftPurchaseOrderForm({
           type="button"
           variant="outline"
           disabled={mutation.isPending}
-          onClick={() => append({ productId: "", orderedQuantity: 1, unitPrice: 0 })}
+          onClick={() =>
+            append({ productId: "", orderedQuantity: 1, unitPrice: 0 })
+          }
         >
           Add line
         </Button>

@@ -15,12 +15,20 @@ import { ConfirmGoodsReceiptForm } from "./ConfirmGoodsReceiptForm";
 import { statusLabels } from "./PurchaseOrderStatus";
 import { GoodsReceiptHistory } from "./GoodsReceiptHistory";
 
+const overdueDateTimeFormat = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Europe/Luxembourg",
+});
+
 export function PurchaseOrderDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const query = usePurchaseOrder(id ?? "");
   const isNotFound =
     query.error instanceof ApiError && query.error.status === 404;
   const { can, user } = usePermissions();
+
+  const overdueAlert = query.data?.overdueAlert;
 
   return (
     <div className="space-y-6">
@@ -61,7 +69,7 @@ export function PurchaseOrderDetailsPage() {
         </FeedbackPanel>
       ) : (
         <>
-          <dl className="grid gap-4 rounded-xl border bg-card p-6 sm:grid-cols-3">
+          <dl className="grid gap-4 rounded-xl border bg-card p-6 sm:grid-cols-2 xl:grid-cols-4">
             <div>
               <dt className="text-sm text-muted-foreground">Supplier</dt>
               <dd className="font-medium">{query.data.supplierName}</dd>
@@ -74,13 +82,79 @@ export function PurchaseOrderDetailsPage() {
               <dt className="text-sm text-muted-foreground">Status</dt>
               <dd className="font-medium">{statusLabels[query.data.status]}</dd>
             </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">
+                Expected delivery
+              </dt>
+              <dd className="font-medium">
+                {query.data.expectedDeliveryDate ? (
+                  <time dateTime={query.data.expectedDeliveryDate}>
+                    {query.data.expectedDeliveryDate}
+                  </time>
+                ) : (
+                  "Not set"
+                )}
+              </dd>
+            </div>
           </dl>
+
+          {overdueAlert && (
+            <FeedbackPanel
+              title={
+                <span className="flex items-start justify-between gap-3">
+                  <span>Overdue delivery history</span>
+                  <span
+                    className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      overdueAlert.resolvedAt
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {overdueAlert.resolvedAt ? "Resolved" : "Overdue"}
+                  </span>
+                </span>
+              }
+            >
+              <p>
+                {overdueAlert.resolvedAt
+                  ? "Resolved"
+                  : "Active · Delivery overdue"}
+              </p>
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <dt className="font-medium">Detected at</dt>
+                  <dd>
+                    <time dateTime={overdueAlert.detectedAt}>
+                      {overdueDateTimeFormat.format(
+                        new Date(overdueAlert.detectedAt),
+                      )}
+                    </time>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium">Resolved at</dt>
+                  <dd>
+                    {overdueAlert.resolvedAt ? (
+                      <time dateTime={overdueAlert.resolvedAt}>
+                        {overdueDateTimeFormat.format(
+                          new Date(overdueAlert.resolvedAt),
+                        )}
+                      </time>
+                    ) : (
+                      "Still active"
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            </FeedbackPanel>
+          )}
 
           <PurchaseOrderLines order={query.data} />
 
-          {can("Inventory.Receive") && [3, 5, 6].includes(query.data.status) && (
-            <ConfirmGoodsReceiptForm key={query.data.id} order={query.data} />
-          )}
+          {can("Inventory.Receive") &&
+            [3, 5, 6].includes(query.data.status) && (
+              <ConfirmGoodsReceiptForm key={query.data.id} order={query.data} />
+            )}
 
           <GoodsReceiptHistory order={query.data} />
 

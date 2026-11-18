@@ -3,5 +3,7 @@
     public sealed record UpdateDraftPurchaseOrderCommand(
         Guid PurchaseOrderId,
         Guid ExpectedVersion,
-        IReadOnlyList<UpdateDraftPurchaseOrderLineCommand> Lines);
+        IReadOnlyList<UpdateDraftPurchaseOrderLineCommand> Lines,
+        bool UpdateExpectedDeliveryDate = false,
+        DateOnly? ExpectedDeliveryDate = null);
 }

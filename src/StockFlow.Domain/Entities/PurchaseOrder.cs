@@ -22,6 +22,7 @@ namespace StockFlow.Domain.Entities
         public DateTimeOffset? SubmittedAt { get; private set; }
         public DateTimeOffset? ApprovedAt { get; private set; }
         public DateTimeOffset? RejectedAt { get; private set; }
+        public DateOnly? ExpectedDeliveryDate { get; private set; }
 
         public IReadOnlyList<PurchaseOrderLine> Lines => _lines.AsReadOnly();
         public decimal TotalAmount => _lines.Sum(line => line.LineTotal);
@@ -434,6 +435,28 @@ namespace StockFlow.Domain.Entities
             Status = _lines.All(line => line.RemainingQuantity == 0)
                 ? PurchaseOrderStatus.Received
                 : PurchaseOrderStatus.PartiallyReceived;
+        }
+
+        public void SetExpectedDeliveryDate(DateOnly? expectedDeliveryDate)
+        {
+            EnsureDraft();
+
+            if (expectedDeliveryDate == DateOnly.MinValue)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(expectedDeliveryDate),
+                    "Expected delivery date must be a valid calendar date.");
+            }
+
+            ExpectedDeliveryDate = expectedDeliveryDate;
+        }
+
+        public bool IsOverdue(DateOnly today)
+        {
+            return (Status is PurchaseOrderStatus.Approved or PurchaseOrderStatus.PartiallyReceived)
+                && ExpectedDeliveryDate is { } expectedDate
+                && expectedDate < today
+                && _lines.Any(line => line.RemainingQuantity > 0);
         }
 
         private void EnsureDraft()

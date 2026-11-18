@@ -1,4 +1,5 @@
 ﻿using StockFlow.Application.Abstractions;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Authorization;
@@ -15,25 +16,33 @@ namespace StockFlow.Application.GoodsReceipts.ConfirmGoodsReceipt
         private readonly IPurchaseOrderRepository _orders;
         private readonly IInventoryRepository _inventories;
         private readonly IClock _clock;
+        private readonly IPurchasingChangeNotifier _purchasingNotifier;
+        private readonly IInventoryChangeNotifier _inventoryNotifier;
 
         public ConfirmGoodsReceiptCommandHandler(
             ICurrentUser currentUser,
             IGoodsReceiptRepository receipts,
             IPurchaseOrderRepository orders,
             IInventoryRepository inventories,
-            IClock clock)
+            IClock clock,
+            IPurchasingChangeNotifier purchasingNotifer,
+            IInventoryChangeNotifier inventoryNotifier)
         {
             ArgumentNullException.ThrowIfNull(currentUser);
             ArgumentNullException.ThrowIfNull(receipts);
             ArgumentNullException.ThrowIfNull(orders);
             ArgumentNullException.ThrowIfNull(inventories);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(purchasingNotifer);
+            ArgumentNullException.ThrowIfNull(inventoryNotifier);
 
             _currentUser = currentUser;
             _receipts = receipts;
             _orders = orders;
             _inventories = inventories;
             _clock = clock;
+            _purchasingNotifier = purchasingNotifer;
+            _inventoryNotifier = inventoryNotifier;
         }
 
         public async Task<ConfirmGoodsReceiptResult> HandleAsync(
@@ -57,6 +66,10 @@ namespace StockFlow.Application.GoodsReceipts.ConfirmGoodsReceipt
 
             await _receipts.SaveConfirmationAsync(
                 receipt, order, inventories, cancellationToken);
+
+            await Task.WhenAll(
+                _purchasingNotifier.NotifyAsync(Array.Empty<Guid>(), cancellationToken),
+                _inventoryNotifier.NotifyAsync(new InventoryChanged(), cancellationToken));
 
             return ToResult(receipt);
         }

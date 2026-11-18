@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 using StockFlow.Application.Exceptions;
 using StockFlow.Domain.Entities;
+using StockFlow.Domain.Enums;
 using StockFlow.Infrastructure.Persistence;
 using StockFlow.Infrastructure.Persistence.Repositories;
 
@@ -58,7 +59,13 @@ public class PurchaseOrderRepositoryTests
         order.AddLine(Guid.NewGuid(), "LAPTOP-001", "Laptop", 2, 19.95m);
 
         var originalVersion = Guid.NewGuid();
-        var interceptor = new InspectSubmissionSaveInterceptor(originalVersion);
+        var submittedAt = order.CreatedAt.AddMinutes(1);
+        var notification = new PurchasingNotification(
+            Guid.NewGuid(),
+            order.Id,
+            PurchasingNotificationKind.PurchaseOrderSubmitted,
+            submittedAt);
+        var interceptor = new InspectSubmissionSaveInterceptor(originalVersion, notification);
         var options = new DbContextOptionsBuilder<StockFlowDbContext>()
             .UseNpgsql("Host=localhost;Database=unused_order_test")
             .AddInterceptors(interceptor)
@@ -72,16 +79,17 @@ public class PurchaseOrderRepositoryTests
         version.OriginalValue = originalVersion;
         version.IsModified = false;
 
-        order.Submit(order.CreatedAt.AddMinutes(1));
+        order.Submit(submittedAt);
 
         var repository = new PurchaseOrderRepository(context);
-        await repository.SaveAsync(order);
+        await repository.SaveAsync(order, notifications: [notification]);
 
         Assert.Equal(1, interceptor.CallCount);
     }
 
     private sealed class InspectSubmissionSaveInterceptor(
-        Guid originalVersion) : SaveChangesInterceptor
+        Guid originalVersion,
+        PurchasingNotification expectedNotification) : SaveChangesInterceptor
     {
         public int CallCount { get; private set; }
 
@@ -105,8 +113,13 @@ public class PurchaseOrderRepositoryTests
             var line = Assert.Single(context.ChangeTracker.Entries<PurchaseOrderLine>());
             Assert.Equal(EntityState.Unchanged, line.State);
 
+            var notification = Assert.Single(
+                context.ChangeTracker.Entries<PurchasingNotification>());
+            Assert.Same(expectedNotification, notification.Entity);
+            Assert.Equal(EntityState.Added, notification.State);
+
             return ValueTask.FromResult(
-                InterceptionResult<int>.SuppressWithResult(1));
+                InterceptionResult<int>.SuppressWithResult(2));
         }
     }
 

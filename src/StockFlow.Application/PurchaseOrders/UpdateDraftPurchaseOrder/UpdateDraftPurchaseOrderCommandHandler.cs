@@ -88,6 +88,14 @@ namespace StockFlow.Application.PurchaseOrders.UpdateDraftPurchaseOrder
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (command.UpdateExpectedDeliveryDate &&
+                command.ExpectedDeliveryDate == DateOnly.MinValue)
+            {
+                throw new RequestValidationException(
+                    nameof(command.ExpectedDeliveryDate),
+                    "Expected delivery date must be a valid calendar date.");
+            }
+
             try
             {
                 order.ReplaceDraftLines(drafts);
@@ -101,6 +109,11 @@ namespace StockFlow.Application.PurchaseOrders.UpdateDraftPurchaseOrder
             {
                 throw new RequestValidationException(
                     nameof(command.Lines), "The line or order total exceeds the supported range.");
+            }
+
+            if (command.UpdateExpectedDeliveryDate)
+            {
+                order.SetExpectedDeliveryDate(command.ExpectedDeliveryDate);
             }
 
             await _orders.SaveAsync(order, cancellationToken);

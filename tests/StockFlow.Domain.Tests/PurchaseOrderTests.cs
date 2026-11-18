@@ -1185,4 +1185,70 @@ public class PurchaseOrderTests
         Assert.Same(originalLine, Assert.Single(order.Lines));
         Assert.Equal(5m, order.TotalAmount);
     }
+
+    [Theory]
+    [InlineData(-1, true)]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    [InlineData(null, false)]
+    public void IsOverdue_UsesTheExpectedDeliveryDateBoundary(
+    int? daysFromToday, bool expected)
+    {
+        var today = DateOnly.FromDateTime(CreatedAt.UtcDateTime).AddDays(3);
+        var dueDate = daysFromToday is int days ? today.AddDays(days) : (DateOnly?)null;
+        var order = CreateOrderWithDeliveryDate(dueDate);
+
+        order.Submit(CreatedAt.AddMinutes(1));
+        order.Approve(CreatedAt.AddMinutes(2), DecisionUserId);
+
+        Assert.Equal(expected, order.IsOverdue(today));
+    }
+
+    [Theory]
+    [InlineData(PurchaseOrderStatus.Draft, false)]
+    [InlineData(PurchaseOrderStatus.PendingApproval, false)]
+    [InlineData(PurchaseOrderStatus.Rejected, false)]
+    [InlineData(PurchaseOrderStatus.Approved, true)]
+    [InlineData(PurchaseOrderStatus.PartiallyReceived, true)]
+    [InlineData(PurchaseOrderStatus.Received, false)]
+    public void IsOverdue_RequiresAnEligibleStatusAndOutstandingUnits(
+        PurchaseOrderStatus status, bool expected)
+    {
+        var today = DateOnly.FromDateTime(CreatedAt.UtcDateTime).AddDays(3);
+        var order = CreateOrderWithDeliveryDate(today.AddDays(-1));
+
+        if (status != PurchaseOrderStatus.Draft)
+        {
+            order.Submit(CreatedAt.AddMinutes(1));
+        }
+
+        if (status == PurchaseOrderStatus.Rejected)
+        {
+            order.Reject(CreatedAt.AddMinutes(2), DecisionUserId);
+        }
+        else if (status is PurchaseOrderStatus.Approved
+            or PurchaseOrderStatus.PartiallyReceived
+            or PurchaseOrderStatus.Received)
+        {
+            order.Approve(CreatedAt.AddMinutes(2), DecisionUserId);
+        }
+
+        if (status is PurchaseOrderStatus.PartiallyReceived or PurchaseOrderStatus.Received)
+        {
+            var line = Assert.Single(order.Lines);
+            var quantity = status == PurchaseOrderStatus.Received ? 2 : 1;
+            order.ApplyReceipt(CreateReceipt(order, new GoodsReceiptLine(line.Id, quantity)));
+        }
+
+        Assert.Equal(status, order.Status);
+        Assert.Equal(expected, order.IsOverdue(today));
+    }
+
+    private static PurchaseOrder CreateOrderWithDeliveryDate(DateOnly? dueDate)
+    {
+        var order = CreateOrder();
+        order.AddLine(Guid.NewGuid(), "CHAIR", "Office chair", 2, 25m);
+        order.SetExpectedDeliveryDate(dueDate);
+        return order;
+    }
 }

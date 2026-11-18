@@ -158,7 +158,9 @@ public sealed class ConfirmGoodsReceiptEndpointTests
         }
 
         public Task SaveAsync(
-            PurchaseOrder purchaseOrder, CancellationToken cancellationToken)
+            PurchaseOrder purchaseOrder,
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<PurchasingNotification>? notifications = null)
         {
             throw new InvalidOperationException("Expected a combined confirmation save.");
         }

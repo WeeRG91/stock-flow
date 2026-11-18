@@ -39,6 +39,9 @@ namespace StockFlow.Infrastructure.Persistence.Configurations
             builder.Property(order => order.SubmittedAt);
             builder.Property(order => order.ApprovedAt);
             builder.Property(order => order.RejectedAt);
+            builder.Property(order => order.ExpectedDeliveryDate)
+                .HasColumnType("date")
+                .IsRequired(false);
 
             builder.Property(order => order.ApprovedByUserId).IsRequired(false);
             builder.Property(order => order.RejectedByUserId).IsRequired(false);

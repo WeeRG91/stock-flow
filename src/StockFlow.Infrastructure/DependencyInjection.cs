@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using StockFlow.Application.Abstractions.Authentication;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Purchasing;
 using StockFlow.Application.Abstractions.Time;
@@ -10,6 +11,8 @@ using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Inventory.MonitorLowStock;
 using StockFlow.Application.Products.GetProducts;
 using StockFlow.Application.PurchaseOrders;
+using StockFlow.Application.PurchaseOrders.MonitorOverduePurchaseOrders;
+using StockFlow.Application.PurchasingNotifications;
 using StockFlow.Application.Suppliers;
 using StockFlow.Application.Warehouses.GetWarehouses;
 using StockFlow.Infrastructure.Identity;
@@ -84,6 +87,11 @@ namespace StockFlow.Infrastructure
             services.AddScoped<IPurchaseOrderReadService, PurchaseOrderReadService>();
             services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
             services.AddScoped<IGoodsReceiptReadService, GoodsReceiptReadService>();
+            services.AddScoped<IPurchasingNotificationRecipients, IdentityPurchasingNotificationRecipients>();
+            services.AddScoped<IPurchasingNotificationReadService, PurchasingNotificationReadService>();
+            services.AddScoped<IPurchasingNotificationRepository, PurchasingNotificationRepository>();
+            services.AddScoped<IOverduePurchaseOrderReader, OverduePurchaseOrderReader>();
+            services.AddScoped<IOverduePurchaseOrderAlertStore, OverduePurchaseOrderAlertStore>();
 
             return services;
         }

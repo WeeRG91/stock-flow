@@ -1,4 +1,5 @@
 import {
+  Bell,
   Boxes,
   ClipboardList,
   LayoutDashboard,
@@ -15,16 +16,26 @@ const navigationItems = [
   { to: "/warehouses", label: "Warehouses", icon: Warehouse },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
   { to: "/purchase-orders", label: "Purchase Orders", icon: ClipboardList },
+  {
+    to: "/purchasing-notifications",
+    label: "Purchasing notifications",
+    icon: Bell,
+  },
 ];
 
 export function AppNavigation({
   canReadPurchaseOrders,
+  unreadPurchasingCount,
 }: {
-  canReadPurchaseOrders: boolean
+  canReadPurchaseOrders: boolean;
+  unreadPurchasingCount: number;
 }) {
   const visibleItems = canReadPurchaseOrders
     ? navigationItems
-    : navigationItems.filter(({ to }) => to !== "/purchase-orders");
+    : navigationItems.filter(
+        ({ to }) =>
+          to !== "/purchase-orders" && to !== "/purchasing-notifications",
+      );
 
   return (
     <nav aria-label="Main navigation">
@@ -56,6 +67,22 @@ export function AppNavigation({
               />
 
               <span>{label}</span>
+              {to === "/purchasing-notifications" &&
+                unreadPurchasingCount > 0 && (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="ml-auto shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"
+                    >
+                      {unreadPurchasingCount > 99
+                        ? "99+"
+                        : unreadPurchasingCount}
+                    </span>
+                    <span className="sr-only">
+                      , {unreadPurchasingCount} unread
+                    </span>
+                  </>
+                )}
             </NavLink>
           </li>
         ))}

@@ -41,7 +41,8 @@ namespace StockFlow.Infrastructure.Persistence.Repositories
 
         public async Task SaveAsync(
             PurchaseOrder purchaseOrder,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<PurchasingNotification>? notifications = null)
         {
             ArgumentNullException.ThrowIfNull(purchaseOrder);
             cancellationToken.ThrowIfCancellationRequested();
@@ -61,7 +62,7 @@ namespace StockFlow.Infrastructure.Persistence.Repositories
 
             try
             {
-                await SaveCoreAsync(purchaseOrder, cancellationToken);
+                await SaveCoreAsync(purchaseOrder, notifications, cancellationToken);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -101,7 +102,10 @@ namespace StockFlow.Infrastructure.Persistence.Repositories
             }
         }
 
-        private async Task SaveCoreAsync(PurchaseOrder purchaseOrder, CancellationToken cancellationToken = default)
+        private async Task SaveCoreAsync(
+            PurchaseOrder purchaseOrder,
+            IReadOnlyList<PurchasingNotification>? notifications,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(purchaseOrder);
             cancellationToken.ThrowIfCancellationRequested();
@@ -136,6 +140,12 @@ namespace StockFlow.Infrastructure.Persistence.Repositories
             }
 
             tracker.DetectChanges();
+
+            if (notifications is { Count: > 0 })
+            {
+                _context.PurchasingNotifications.AddRange(notifications);
+            }
+
             await _context.SaveChangesAsync(cancellationToken);
         }
 

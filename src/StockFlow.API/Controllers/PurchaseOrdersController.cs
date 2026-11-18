@@ -156,7 +156,9 @@ namespace StockFlow.API.Controllers
             var command = new UpdateDraftPurchaseOrderCommand(
                 id,
                 request.ExpectedVersion!.Value,
-                lines);
+                lines,
+                request.UpdateExpectedDeliveryDate,
+                request.ExpectedDeliveryDate);
 
             await _updateHandler.HandleAsync(command, cancellationToken);
             return NoContent();

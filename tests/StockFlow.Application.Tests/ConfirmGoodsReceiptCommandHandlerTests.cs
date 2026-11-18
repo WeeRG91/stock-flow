@@ -1,4 +1,5 @@
 ﻿using StockFlow.Application.Authorization;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Exceptions;
 using StockFlow.Application.GoodsReceipts.ConfirmGoodsReceipt;
 using StockFlow.Application.Tests.Fakes;
@@ -59,6 +60,8 @@ public class ConfirmGoodsReceiptCommandHandlerTests
         var movement = Assert.Single(balance.PendingMovements);
         Assert.Equal(quantity, movement.QuantityChange);
         Assert.Equal(StockMovementType.Receipt, movement.Type);
+        Assert.Empty(Assert.Single(fixture.PurchasingNotifier.Calls));
+        Assert.Single(fixture.InventoryNotifier.Notifications);
     }
 
     [Fact]
@@ -81,6 +84,8 @@ public class ConfirmGoodsReceiptCommandHandlerTests
         Assert.Equal(0, fixture.Orders.LookupCallCount);
         Assert.Equal(0, fixture.Inventories.GetCallCount);
         Assert.Equal(0, fixture.Receipts.SaveCallCount);
+        Assert.Empty(fixture.PurchasingNotifier.Calls);
+        Assert.Empty(fixture.InventoryNotifier.Notifications);
     }
 
     [Fact]
@@ -206,6 +211,21 @@ public class ConfirmGoodsReceiptCommandHandlerTests
         Assert.Null(fixture.Receipts.LastSavedReceipt);
         Assert.Equal(0, fixture.Orders.SaveCallCount);
         Assert.Equal(0, fixture.Inventories.SaveCallCount);
+        Assert.Empty(fixture.PurchasingNotifier.Calls);
+        Assert.Empty(fixture.InventoryNotifier.Notifications);
+    }
+
+    private sealed class RecordingPurchasingNotifier : IPurchasingChangeNotifier
+    {
+        public List<Guid[]> Calls { get; } = [];
+
+        public Task NotifyAsync(
+            IReadOnlyCollection<Guid> inboxRecipientIds,
+            CancellationToken cancellationToken = default)
+        {
+            Calls.Add(inboxRecipientIds.ToArray());
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class Fixture
@@ -217,6 +237,8 @@ public class ConfirmGoodsReceiptCommandHandlerTests
         public FakeGoodsReceiptRepository Receipts { get; } = new();
         public FakePurchaseOrderRepository Orders { get; } = new();
         public FakeInventoryRepository Inventories { get; } = new();
+        public RecordingPurchasingNotifier PurchasingNotifier { get; } = new();
+        public FakeInventoryChangeNotifier InventoryNotifier { get; } = new();
         public PurchaseOrder Order { get; }
         public ConfirmGoodsReceiptCommandHandler Handler { get; }
 
@@ -233,7 +255,8 @@ public class ConfirmGoodsReceiptCommandHandlerTests
             Orders.Loaded = (Order, _version);
 
             Handler = new ConfirmGoodsReceiptCommandHandler(
-                User, Receipts, Orders, Inventories, Clock);
+                User, Receipts, Orders, Inventories, Clock,
+                PurchasingNotifier, InventoryNotifier);
         }
 
         public ConfirmGoodsReceiptCommand Command(int quantity)

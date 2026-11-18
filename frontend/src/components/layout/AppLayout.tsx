@@ -6,6 +6,8 @@ import { Boxes, LogOut, Menu, UserRound, X } from "lucide-react";
 import type { CurrentUserResponse } from "@/types/api";
 import { useLogout } from "@/features/auth/useLogout";
 import { ApiError } from "@/lib/ApiError";
+import { usePurchasingRealtime } from "@/features/purchasing-notification/usePurchasingRealtime";
+import { usePurchasingNotifications } from "@/features/purchasing-notification/usePurchasingNotifications";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -16,6 +18,12 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   const [navigationOpen, setNavigationOpen] = useState<boolean>(false);
   const navigationId = useId();
   const logoutMutation = useLogout();
+  const canReadPurchaseOrders = user.capabilities.includes(
+    "PurchaseOrders.Read",
+  );
+  const purchasingUserId = canReadPurchaseOrders ? user.id : "";
+  usePurchasingRealtime(purchasingUserId);
+  const inbox = usePurchasingNotifications(purchasingUserId);
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
@@ -78,9 +86,8 @@ export function AppLayout({ children, user }: AppLayoutProps) {
           <div className="min-h-0 overflow-hidden">
             <div className="p-4">
               <AppNavigation
-                canReadPurchaseOrders={user.capabilities.includes(
-                  "PurchaseOrders.Read",
-                )}
+                canReadPurchaseOrders={canReadPurchaseOrders}
+                unreadPurchasingCount={inbox.data?.unreadCount ?? 0}
               />
             </div>
           </div>

@@ -1,8 +1,11 @@
 ﻿using StockFlow.Application.Abstractions;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Authorization;
 using StockFlow.Application.Exceptions;
+using StockFlow.Domain.Entities;
+using StockFlow.Domain.Enums;
 
 namespace StockFlow.Application.PurchaseOrders.ApprovePurchaseOrder
 {
@@ -11,19 +14,23 @@ namespace StockFlow.Application.PurchaseOrders.ApprovePurchaseOrder
         private readonly ICurrentUser _currentUser;
         private readonly IPurchaseOrderRepository _orders;
         private readonly IClock _clock;
+        private readonly IPurchasingChangeNotifier _notifier;
 
         public ApprovePurchaseOrderCommandHandler(
             ICurrentUser currentUser,
             IPurchaseOrderRepository orders,
-            IClock clock)
+            IClock clock,
+            IPurchasingChangeNotifier notifier)
         {
             ArgumentNullException.ThrowIfNull(currentUser);
             ArgumentNullException.ThrowIfNull(orders);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(notifier);
 
             _currentUser = currentUser;
             _orders = orders;
             _clock = clock;
+            _notifier = notifier;
         }
 
         public async Task HandleAsync(
@@ -87,7 +94,16 @@ namespace StockFlow.Application.PurchaseOrders.ApprovePurchaseOrder
                 throw new BusinessRuleException(exception.Message);
             }
 
-            await _orders.SaveAsync(order, cancellationToken);
+            var notification = new PurchasingNotification(
+                order.CreatedByUserId,
+                order.Id,
+                PurchasingNotificationKind.PurchaseOrderApproved,
+                approvedAt);
+
+            await _orders.SaveAsync(order, cancellationToken, notifications: [notification]);
+
+            await _notifier.NotifyAsync(
+                [notification.RecipientUserId], cancellationToken);
         }
     }
 }

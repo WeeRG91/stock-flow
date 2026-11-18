@@ -32,6 +32,7 @@ namespace StockFlow.Infrastructure.BackgroundJobs
                     }));
             services.AddTransient<DevelopmentDemoJob>();
             services.AddTransient<LowStockMonitoringJob>();
+            services.AddTransient<OverduePurchaseOrderMonitoringJob>();
 
             return services;
         }

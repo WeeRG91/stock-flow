@@ -1,8 +1,11 @@
 ﻿using StockFlow.Application.Abstractions;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Authorization;
 using StockFlow.Application.Exceptions;
+using StockFlow.Domain.Entities;
+using StockFlow.Domain.Enums;
 
 namespace StockFlow.Application.PurchaseOrders.SubmitPurchaseOrder
 {
@@ -11,19 +14,27 @@ namespace StockFlow.Application.PurchaseOrders.SubmitPurchaseOrder
         private readonly ICurrentUser _currentUser;
         private readonly IPurchaseOrderRepository _orders;
         private readonly IClock _clock;
+        private readonly IPurchasingNotificationRecipients _notificationRecipients;
+        private readonly IPurchasingChangeNotifier _notifier;
 
         public SubmitPurchaseOrderCommandHandler(
             ICurrentUser currentUser,
             IPurchaseOrderRepository orders,
-            IClock clock)
+            IClock clock,
+            IPurchasingNotificationRecipients notificationRecipients,
+            IPurchasingChangeNotifier notifier)
         {
             ArgumentNullException.ThrowIfNull(currentUser);
             ArgumentNullException.ThrowIfNull(orders);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(notificationRecipients);
+            ArgumentNullException.ThrowIfNull(notifier);
 
             _currentUser = currentUser;
             _orders = orders;
             _clock = clock;
+            _notificationRecipients = notificationRecipients;
+            _notifier = notifier;
         }
 
         public async Task HandleAsync(
@@ -83,7 +94,22 @@ namespace StockFlow.Application.PurchaseOrders.SubmitPurchaseOrder
                 throw new BusinessRuleException(exception.Message);
             }
 
-            await _orders.SaveAsync(order, cancellationToken);
+            var approverIds = await _notificationRecipients.GetApproverUserIdsAsync(cancellationToken);
+
+            var notifications = approverIds
+                .Where(approverId => approverId != order.CreatedByUserId)
+                .Select(approverId => new PurchasingNotification(
+                    approverId,
+                    order.Id,
+                    PurchasingNotificationKind.PurchaseOrderSubmitted,
+                    submittedAt))
+                .ToArray();
+
+            await _orders.SaveAsync(order, cancellationToken, notifications: notifications);
+
+            await _notifier.NotifyAsync(
+                notifications.Select(notification => notification.RecipientUserId).ToArray(),
+                cancellationToken);
         }
     }
 }

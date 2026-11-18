@@ -20,6 +20,15 @@ namespace StockFlow.Infrastructure.BackgroundJobs
                 {
                     TimeZone = timeZone
                 });
+
+            recurringJobs.AddOrUpdate<OverduePurchaseOrderMonitoringJob>(
+                "overdue-purchase-order-monitoring",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(7, 15),
+                new RecurringJobOptions
+                {
+                    TimeZone = timeZone
+                });
         }
     }
 }

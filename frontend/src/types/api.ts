@@ -182,6 +182,11 @@ export interface PurchaseOrderDetailsDto {
   submittedAt: string | null;
   approvedAt: string | null;
   rejectedAt: string | null;
+  expectedDeliveryDate: string | null;
+  overdueAlert: {
+    detectedAt: string;
+    resolvedAt: string | null;
+  } | null;
   approvedByUserId: string | null;
   rejectedByUserId: string | null;
   version: string;
@@ -192,6 +197,7 @@ export interface PurchaseOrderDetailsDto {
 
 export interface UpdateDraftPurchaseOrderRequest {
   expectedVersion: string;
+  expectedDeliveryDate?: string | null;
   lines: CreatePurchaseOrderLineRequest[];
 }
 
@@ -218,4 +224,22 @@ export interface GoodsReceiptHistoryItemDto {
   receiptId: string;
   confirmedAt: string;
   lines: GoodsReceiptLineDto[];
+}
+
+export type PurchasingNotificationKind = 1 | 2 | 3;
+
+export interface PurchasingNotificationDto {
+  id: string;
+  purchaseOrderId: string;
+  kind: PurchasingNotificationKind;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface GetPurchasingNotificationsResult {
+  items: PurchasingNotificationDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  unreadCount: number;
 }

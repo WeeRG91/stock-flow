@@ -1,9 +1,25 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace StockFlow.API.Contracts.PurchaseOrders
 {
     public sealed class UpdateDraftPurchaseOrderRequest : IValidatableObject
     {
+        private DateOnly? _expectedDeliveryDate;
+
+        public DateOnly? ExpectedDeliveryDate
+        {
+            get => _expectedDeliveryDate;
+            init
+            {
+                _expectedDeliveryDate = value;
+                UpdateExpectedDeliveryDate = true;
+            }
+        }
+
+        [JsonIgnore]
+        public bool UpdateExpectedDeliveryDate { get; private set; }
+
         [Required]
         public Guid? ExpectedVersion { get; init; }
 

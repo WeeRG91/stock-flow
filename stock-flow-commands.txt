@@ -91,7 +91,7 @@ Seeder
 dotnet run --project src/StockFlow.API --launch-profile http -- --SeedDevelopmentData=true
 
 Start Api
-dotnet run --project src/StockFlow.API --launch-profile http
+dotnet run --project src/StockFlow.API --launch-profile https
 
 Frontend
 node --version

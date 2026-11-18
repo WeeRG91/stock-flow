@@ -55,7 +55,13 @@ namespace StockFlow.Infrastructure.Purchasing
                         .ToList())
                 {
                     ApprovedByUserId = order.ApprovedByUserId,
-                    RejectedByUserId = order.RejectedByUserId
+                    RejectedByUserId = order.RejectedByUserId,
+                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
+                    OverdueAlert = _context.OverduePurchaseOrderAlerts
+                        .Where(alert => alert.PurchaseOrderId == order.Id)
+                        .Select(alert => new OverduePurchaseOrderAlertDto(
+                            alert.DetectedAt, alert.ResolvedAt))
+                        .SingleOrDefault()
                 })
                 .SingleOrDefaultAsync(cancellationToken);
         }

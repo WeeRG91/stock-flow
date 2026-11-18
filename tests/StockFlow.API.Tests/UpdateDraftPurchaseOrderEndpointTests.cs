@@ -98,6 +98,75 @@ public class UpdateDraftPurchaseOrderEndpointTests
         Assert.Equal(0, repository.SaveCallCount);
     }
 
+    [Theory]
+    [InlineData("omit", HttpStatusCode.NoContent)]
+    [InlineData("clear", HttpStatusCode.NoContent)]
+    [InlineData("set", HttpStatusCode.NoContent)]
+    [InlineData("invalid", HttpStatusCode.BadRequest)]
+    public async Task UpdateDraft_HandlesExpectedDeliveryDate(
+    string scenario, HttpStatusCode expectedStatus)
+    {
+        using var factory = new StockFlowApiFactory();
+        factory.User.Roles = [StockFlowRoles.PurchasingOfficer];
+
+        var order = CreateOrder(factory);
+        var originalLine = Assert.Single(order.Lines);
+        var originalDate = new DateOnly(2026, 10, 20);
+        var newDate = originalDate.AddDays(2);
+        order.SetExpectedDeliveryDate(originalDate);
+
+        var repository = new RecordingEditRepository(order);
+        using var host = CreateHost(factory, repository);
+        using var client = await host.CreateClientWithAntiforgeryAsync();
+
+        var body = new Dictionary<string, object?>
+        {
+            ["expectedVersion"] = repository.Version,
+            ["lines"] = new[]
+            {
+            new { productId = factory.Product.Id, orderedQuantity = 2, unitPrice = 12m }
+        }
+        };
+
+        switch (scenario)
+        {
+            case "clear":
+                body["expectedDeliveryDate"] = null;
+                break;
+            case "set":
+                body["expectedDeliveryDate"] = newDate;
+                break;
+            case "invalid":
+                body["expectedDeliveryDate"] = DateOnly.MinValue;
+                break;
+        }
+
+        using var response = await client.PutAsJsonAsync(
+            $"/api/purchase-orders/{order.Id}", body);
+
+        Assert.Equal(expectedStatus, response.StatusCode);
+
+        DateOnly? expectedDate = scenario switch
+        {
+            "clear" => null,
+            "set" => newDate,
+            _ => originalDate
+        };
+
+        Assert.Equal(expectedDate, order.ExpectedDeliveryDate);
+
+        if (expectedStatus == HttpStatusCode.BadRequest)
+        {
+            Assert.Equal(0, repository.SaveCallCount);
+            Assert.Same(originalLine, Assert.Single(order.Lines));
+        }
+        else
+        {
+            Assert.Equal(1, repository.SaveCallCount);
+            Assert.Equal(2, Assert.Single(order.Lines).OrderedQuantity);
+        }
+    }
+
     private static PurchaseOrder CreateOrder(StockFlowApiFactory factory)
     {
         var order = new PurchaseOrder(
@@ -154,7 +223,8 @@ public class UpdateDraftPurchaseOrderEndpointTests
 
         public Task SaveAsync(
             PurchaseOrder purchaseOrder,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<PurchasingNotification>? notifications = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Assert.Same(order, purchaseOrder);

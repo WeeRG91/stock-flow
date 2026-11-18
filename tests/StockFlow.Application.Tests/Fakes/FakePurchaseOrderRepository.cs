@@ -27,7 +27,8 @@ internal sealed class FakePurchaseOrderRepository : IPurchaseOrderRepository
 
     public Task SaveAsync(
         PurchaseOrder purchaseOrder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<PurchasingNotification>? notifications = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

@@ -10,6 +10,7 @@ import { ProtectedLayout } from "./ProtectedLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { PurchaseOrdersPage } from "@/features/purchase-orders/PurchaseOrdersPage";
 import { PurchaseOrderDetailsPage } from "@/features/purchase-orders/PurchaseOrderDetailsPage";
+import { PurchasingNotificationsPage } from "@/features/purchasing-notification/PurchasingNotificationsPage";
 
 export function AppRoutes() {
   return (
@@ -24,7 +25,14 @@ export function AppRoutes() {
         <Route path="/suppliers" element={<SuppliersPage />} />
         <Route path="/suppliers/:id" element={<SupplierDetailsPage />} />
         <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
-        <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailsPage />} />
+        <Route
+          path="/purchase-orders/:id"
+          element={<PurchaseOrderDetailsPage />}
+        />
+        <Route
+          path="/purchasing-notifications"
+          element={<PurchasingNotificationsPage />}
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -19,6 +19,7 @@ namespace StockFlow.Application.Abstractions.Persistence
         /// </summary>
         Task SaveAsync(
             PurchaseOrder purchaseOrder,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<PurchasingNotification>? notifications = null);
     }
 }

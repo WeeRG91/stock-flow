@@ -24,7 +24,10 @@ const lineSchema = z.object({
 });
 
 export const updateDraftPurchaseOrderSchema = z
-  .object({ lines: z.array(lineSchema) })
+  .object({
+    expectedDeliveryDate: z.union([z.literal(""), z.iso.date()]),
+    lines: z.array(lineSchema),
+  })
   .superRefine(({ lines }, context) => {
     const seenProducts = new Set<string>();
 

@@ -127,6 +127,32 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.OverduePurchaseOrderAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DetectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseOrderId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_OverduePurchaseOrderAlerts_PurchaseOrderId");
+
+                    b.ToTable("OverduePurchaseOrderAlerts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_OverduePurchaseOrderAlerts_ResolutionAfterDetection", "\"ResolvedAt\" IS NULL OR \"ResolvedAt\" >= \"DetectedAt\"");
+                        });
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -173,6 +199,9 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("ExpectedDeliveryDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("OrderNumber")
                         .IsRequired()
@@ -273,6 +302,39 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_PurchaseOrderLines_ReceivedQuantity_Valid", "\"ReceivedQuantity\" >= 0 AND \"ReceivedQuantity\" <= \"OrderedQuantity\"");
 
                             t.HasCheckConstraint("CK_PurchaseOrderLines_UnitPrice_Valid", "\"UnitPrice\" >= 0 AND \"UnitPrice\" <= 79228162514264337593543950335 AND \"UnitPrice\" = round(\"UnitPrice\", 2)");
+                        });
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.PurchasingNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.HasIndex("RecipientUserId", "PurchaseOrderId", "Kind")
+                        .IsUnique();
+
+                    b.ToTable("PurchasingNotifications", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PurchasingNotifications_ReadAfterCreation", "\"ReadAt\" IS NULL OR \"ReadAt\" >= \"CreatedAt\"");
                         });
                 });
 
@@ -425,6 +487,15 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.OverduePurchaseOrderAlert", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.PurchaseOrder", b =>
                 {
                     b.HasOne("StockFlow.Domain.Entities.Supplier", null)
@@ -450,6 +521,15 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
 
                     b.HasOne("StockFlow.Domain.Entities.PurchaseOrder", null)
                         .WithMany("Lines")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.PurchasingNotification", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.PurchaseOrder", null)
+                        .WithMany()
                         .HasForeignKey("PurchaseOrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
