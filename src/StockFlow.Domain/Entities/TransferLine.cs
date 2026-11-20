@@ -6,7 +6,7 @@
         public Guid ProductId { get; }
         public string ProductSku { get; }
         public string ProductName { get; }
-        public int Quantity { get; }
+        public int Quantity { get; private set; }
         public int DispatchedQuantity { get; private set; }
         public int ReceivedQuantity { get; private set; }
         public int InTransitQuantity => DispatchedQuantity - ReceivedQuantity;
@@ -45,6 +45,24 @@
             ProductId = productId;
             ProductSku = productSku.Trim().ToUpperInvariant();
             ProductName = productName.Trim();
+            Quantity = quantity;
+        }
+
+        internal void UpdateQuantity(int quantity)
+        {
+            if (DispatchedQuantity != 0)
+            {
+                throw new InvalidOperationException(
+                    "A dispatched transfer line cannot be edited.");
+            }
+
+            if (quantity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(quantity),
+                    "Quantity must be greater than zero.");
+            }
+
             Quantity = quantity;
         }
 

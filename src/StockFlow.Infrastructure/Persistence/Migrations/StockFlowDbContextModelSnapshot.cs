@@ -408,6 +408,119 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("Suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.Transfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CancelledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DestinationWarehouseCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("DestinationWarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DestinationWarehouseName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DispatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DispatchedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SourceWarehouseCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SourceWarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceWarehouseName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DestinationWarehouseId");
+
+                    b.HasIndex("SourceWarehouseId");
+
+                    b.ToTable("Transfers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Transfers_DifferentWarehouses", "\"SourceWarehouseId\" <> \"DestinationWarehouseId\"");
+                        });
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.TransferLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DispatchedQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductSku")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReceivedQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TransferId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("TransferId", "ProductId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_TransferLines_TransferId_ProductId");
+
+                    b.ToTable("TransferLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TransferLines_DispatchedQuantity_Valid", "\"DispatchedQuantity\" = 0 OR \"DispatchedQuantity\" = \"Quantity\"");
+
+                            t.HasCheckConstraint("CK_TransferLines_Quantity_Positive", "\"Quantity\" > 0");
+
+                            t.HasCheckConstraint("CK_TransferLines_ReceivedQuantity_Valid", "\"ReceivedQuantity\" >= 0 AND \"ReceivedQuantity\" <= \"DispatchedQuantity\"");
+                        });
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.Warehouse", b =>
                 {
                     b.Property<Guid>("Id")
@@ -544,12 +657,47 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.Transfer", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("DestinationWarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockFlow.Domain.Entities.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("SourceWarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.TransferLine", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockFlow.Domain.Entities.Transfer", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.GoodsReceipt", b =>
                 {
                     b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("StockFlow.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.Transfer", b =>
                 {
                     b.Navigation("Lines");
                 });

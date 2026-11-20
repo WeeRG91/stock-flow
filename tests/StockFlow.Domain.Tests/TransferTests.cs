@@ -449,6 +449,92 @@ public sealed class TransferTests
         Assert.Equal(receiptCountBefore, transfer.PendingReceipts.Count);
     }
 
+    [Fact]
+    public void ReplaceDraftLines_PreservesRetainedIdentityAndSnapshots()
+    {
+        var transfer = CreateTransfer();
+        var retainedProductId = Guid.NewGuid();
+        var removedProductId = Guid.NewGuid();
+        var newProductId = Guid.NewGuid();
+
+        transfer.AddLine(retainedProductId, "CHAIR", "Original chair", 4);
+        transfer.AddLine(removedProductId, "DESK", "Office desk", 2);
+        var retained = transfer.Lines[0];
+
+        transfer.ReplaceDraftLines(
+        [
+            new(retainedProductId, "CHANGED", "Changed name", 6),
+        new(newProductId, "LAMP", "Desk lamp", 3)
+        ]);
+
+        Assert.Equal(2, transfer.Lines.Count);
+        Assert.Same(retained, transfer.Lines[0]);
+        Assert.Equal("CHAIR", retained.ProductSku);
+        Assert.Equal("Original chair", retained.ProductName);
+        Assert.Equal(6, retained.Quantity);
+        Assert.DoesNotContain(transfer.Lines, line => line.ProductId == removedProductId);
+
+        var added = Assert.Single(
+            transfer.Lines, line => line.ProductId == newProductId);
+        Assert.Equal("LAMP", added.ProductSku);
+        Assert.Equal(3, added.Quantity);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ReplaceDraftLines_WithInvalidLaterLine_PreservesOriginalDraft(
+        bool duplicateProduct)
+    {
+        var transfer = CreateTransfer();
+        var productId = Guid.NewGuid();
+        transfer.AddLine(productId, "CHAIR", "Office chair", 4);
+        var original = Assert.Single(transfer.Lines);
+
+        TransferLineDraft[] drafts =
+        [
+            new(productId, "CHAIR", "Office chair", 8),
+        duplicateProduct
+            ? new(productId, "CHAIR", "Office chair", 2)
+            : new(Guid.NewGuid(), "", "Invalid product", 2)
+        ];
+
+        Assert.Throws<ArgumentException>(
+            () => transfer.ReplaceDraftLines(drafts));
+
+        Assert.Same(original, Assert.Single(transfer.Lines));
+        Assert.Equal(4, original.Quantity);
+        Assert.Equal(TransferStatus.Draft, transfer.Status);
+    }
+
+    [Fact]
+    public void ReplaceDraftLines_WithEmptyCollection_ClearsDraft()
+    {
+        var transfer = CreateTransfer();
+        transfer.AddLine(Guid.NewGuid(), "CHAIR", "Office chair", 4);
+
+        transfer.ReplaceDraftLines([]);
+
+        Assert.Empty(transfer.Lines);
+        Assert.Equal(TransferStatus.Draft, transfer.Status);
+    }
+
+    [Fact]
+    public void ReplaceDraftLines_AfterDispatch_PreservesLines()
+    {
+        var transfer = CreateTransfer();
+        transfer.AddLine(Guid.NewGuid(), "CHAIR", "Office chair", 4);
+        var original = Assert.Single(transfer.Lines);
+        transfer.Dispatch(CreatedAt.AddMinutes(1), Guid.NewGuid());
+
+        Assert.Throws<InvalidOperationException>(
+            () => transfer.ReplaceDraftLines([]));
+
+        Assert.Same(original, Assert.Single(transfer.Lines));
+        Assert.Equal(4, original.InTransitQuantity);
+        Assert.Equal(TransferStatus.Dispatched, transfer.Status);
+    }
+
     private static Transfer CreateTransfer()
     {
         return new Transfer(

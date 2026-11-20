@@ -90,6 +90,15 @@ namespace StockFlow.API.Authorization
                         .RequireRole(
                             StockFlowRoles.Administrator,
                             StockFlowRoles.PurchasingManager));
+
+                options.AddPolicy(
+                    StockFlowPolicies.TransfersManage,
+                    policy => policy
+                        .RequireAuthenticatedUser()
+                        .RequireRole(
+                            StockFlowRoles.Administrator,
+                            StockFlowRoles.InventoryManager,
+                            StockFlowRoles.WarehouseStaff));
             });
 
             return services;

@@ -11,5 +11,6 @@
         public const string PurchaseOrdersRead = "PurchaseOrders.Read";
         public const string PurchaseOrdersManage = "PurchaseOrders.Manage";
         public const string PurchaseOrdersApprove = "PurchaseOrders.Approve";
+        public const string TransfersManage = "Transfers.Manage";
     }
 }

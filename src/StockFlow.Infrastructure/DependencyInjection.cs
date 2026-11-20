@@ -92,6 +92,7 @@ namespace StockFlow.Infrastructure
             services.AddScoped<IPurchasingNotificationRepository, PurchasingNotificationRepository>();
             services.AddScoped<IOverduePurchaseOrderReader, OverduePurchaseOrderReader>();
             services.AddScoped<IOverduePurchaseOrderAlertStore, OverduePurchaseOrderAlertStore>();
+            services.AddScoped<ITransferRepository, TransferRepository>();
 
             return services;
         }

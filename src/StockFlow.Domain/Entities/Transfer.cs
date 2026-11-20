@@ -112,6 +112,66 @@ namespace StockFlow.Domain.Entities
             return line.Id;
         }
 
+        public void ReplaceDraftLines(IReadOnlyList<TransferLineDraft> drafts)
+        {
+            EnsureDraft();
+            ArgumentNullException.ThrowIfNull(drafts);
+
+            var existingByProduct = _lines.ToDictionary(line => line.ProductId);
+            var productIds = new HashSet<Guid>();
+            var replacements = new List<(TransferLine Line, int Quantity)>();
+
+            foreach (var draft in drafts)
+            {
+                if (draft is null)
+                {
+                    throw new ArgumentException(
+                        "Draft lines must not be null.", nameof(drafts));
+                }
+
+                if (draft.ProductId == Guid.Empty)
+                {
+                    throw new ArgumentException(
+                        "Product ID must not be empty.", nameof(drafts));
+                }
+
+                if (!productIds.Add(draft.ProductId))
+                {
+                    throw new ArgumentException(
+                        "A product can appear only once per transfer.", nameof(drafts));
+                }
+
+                if (draft.Quantity <= 0)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(drafts), "Quantity must be greater than zero.");
+                }
+
+                if (existingByProduct.TryGetValue(draft.ProductId, out var existing))
+                {
+                    replacements.Add((existing, draft.Quantity));
+                }
+                else
+                {
+                    var newLine = new TransferLine(
+                        draft.ProductId,
+                        draft.ProductSku,
+                        draft.ProductName,
+                        draft.Quantity);
+
+                    replacements.Add((newLine, draft.Quantity));
+                }
+            }
+
+            foreach (var (line, quantity) in replacements)
+            {
+                line.UpdateQuantity(quantity);
+            }
+
+            _lines.Clear();
+            _lines.AddRange(replacements.Select(item => item.Line));
+        }
+
         public void Dispatch(DateTimeOffset dispatchedAt, Guid dispatchedByUserId)
         {
             EnsureDraft();

@@ -132,6 +132,7 @@ namespace StockFlow.API.Controllers
                 StockFlowPolicies.PurchaseOrdersRead,
                 StockFlowPolicies.PurchaseOrdersManage,
                 StockFlowPolicies.PurchaseOrdersApprove,
+                StockFlowPolicies.TransfersManage,
             };
 
             var capabilities = new List<string>();

@@ -80,6 +80,11 @@ namespace StockFlow.API.Errors
                     "Purchase order conflict",
                     purchaseOrderConflict.Message),
 
+                TransferConflictException transferConflict => (
+                    StatusCodes.Status409Conflict,
+                    "Transfer conflict",
+                    transferConflict.Message),
+
                 _ => (
                     StatusCodes.Status500InternalServerError,
                     "Internal server error",
