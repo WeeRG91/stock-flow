@@ -33,6 +33,7 @@ public class CurrentUserEndpointTests
                 .Append(StockFlowPolicies.BackgroundJobsManage)
                 .Append(StockFlowPolicies.PurchaseOrdersManage)
                 .Append(StockFlowPolicies.PurchaseOrdersApprove)
+                .Append(StockFlowPolicies.TransfersManage)
                 .ToArray()
         ];
 
@@ -41,6 +42,7 @@ public class CurrentUserEndpointTests
             new[] { StockFlowRoles.InventoryManager },
             ReadCapabilities
                 .Append(StockFlowPolicies.InventoryReceive)
+                .Append(StockFlowPolicies.TransfersManage)
                 .ToArray()
         ];
 
@@ -49,6 +51,7 @@ public class CurrentUserEndpointTests
             new[] { StockFlowRoles.WarehouseStaff },
             ReadCapabilities
                 .Append(StockFlowPolicies.InventoryReceive)
+                .Append(StockFlowPolicies.TransfersManage)
                 .ToArray()
         ];
 
@@ -153,7 +156,8 @@ public class CurrentUserEndpointTests
             ReadCapabilities
                 .Append(StockFlowPolicies.InventoryReceive)
                 .Append(StockFlowPolicies.SuppliersManage)
-                .Append(StockFlowPolicies.PurchaseOrdersManage),
+                .Append(StockFlowPolicies.PurchaseOrdersManage)
+                .Append(StockFlowPolicies.TransfersManage),
             body.Capabilities);
     }
 
