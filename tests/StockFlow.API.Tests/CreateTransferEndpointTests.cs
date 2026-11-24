@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Authorization;
+using StockFlow.Application.Exceptions;
 using StockFlow.Application.Transfers.CreateTransfer;
 using StockFlow.Domain.Entities;
 using StockFlow.Domain.Enums;
@@ -295,10 +296,131 @@ public sealed class CreateTransferEndpointTests
             repository.LookupCount);
     }
 
+    [Theory]
+    [InlineData("ready", HttpStatusCode.NoContent)]
+    [InlineData("missing-version", HttpStatusCode.BadRequest)]
+    [InlineData("empty-version", HttpStatusCode.BadRequest)]
+    [InlineData("missing-transfer", HttpStatusCode.NotFound)]
+    [InlineData("stale", HttpStatusCode.Conflict)]
+    [InlineData("dispatched", HttpStatusCode.Conflict)]
+    [InlineData("insufficient", HttpStatusCode.Conflict)]
+    [InlineData("viewer", HttpStatusCode.Forbidden)]
+    [InlineData("missing-csrf", HttpStatusCode.BadRequest)]
+    [InlineData("save-conflict", HttpStatusCode.Conflict)]
+    [InlineData("unexpected", HttpStatusCode.InternalServerError)]
+    public async Task Dispatch_EnforcesValidationPermissionAndPersistenceErrors(
+        string scenario, HttpStatusCode expectedStatus)
+    {
+        using var factory = new StockFlowApiFactory();
+        factory.User.Roles = scenario == "viewer"
+            ? [StockFlowRoles.Viewer] : [StockFlowRoles.WarehouseStaff];
+        var destination = new Warehouse("LIE", "Liège", "Belgium");
+        var transfer = new Transfer(
+            factory.Warehouse.Id, factory.Warehouse.Code, factory.Warehouse.Name,
+            destination.Id, destination.Code, destination.Name,
+            factory.OccurredAt.AddMinutes(-1), factory.User.Id);
+        transfer.AddLine(factory.Product.Id, factory.Product.Sku, factory.Product.Name, 4);
+        if (scenario == "dispatched")
+            transfer.Dispatch(factory.OccurredAt, factory.User.Id);
+        var originalStatus = transfer.Status;
+
+        var inventory = new StockFlow.Domain.Entities.Inventory(
+            factory.Product.Id, factory.Warehouse.Id);
+        var startingQuantity = scenario == "insufficient" ? 3 : 10;
+        inventory.ReceiveStock(startingQuantity, "Opening stock", factory.OccurredAt);
+        inventory.AcknowledgePersistedMovements(
+            inventory.PendingMovements.Select(movement => movement.Id).ToArray());
+        factory.Inventories.Inventory = inventory;
+
+        var version = Guid.NewGuid();
+        var repository = new RecordingTransferRepository
+        {
+            Loaded = scenario == "missing-transfer" ? null : (transfer, version),
+            DispatchFailure = scenario switch
+            {
+                "save-conflict" => new TransferConflictException(transfer.Id, "Concurrent update."),
+                "unexpected" => new InvalidOperationException("Sensitive dispatch failure detail."),
+                _ => null
+            }
+        };
+        using var host = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<ITransferRepository>();
+                services.RemoveAll<IWarehouseRepository>();
+                services.AddSingleton<ITransferRepository>(repository);
+                services.AddSingleton<IWarehouseRepository>(
+                    new TransferWarehouses(factory.Warehouse, destination));
+            });
+        });
+        using var client = await host.CreateClientWithAntiforgeryAsync();
+        if (scenario == "missing-csrf") client.DefaultRequestHeaders.Clear();
+
+        var body = new Dictionary<string, object?>();
+        if (scenario != "missing-version")
+            body["expectedVersion"] = scenario switch
+            {
+                "empty-version" => Guid.Empty,
+                "stale" => Guid.NewGuid(),
+                _ => version
+            };
+
+        using var response = await client.PostAsJsonAsync(
+            $"/api/transfers/{transfer.Id}/dispatch", body);
+
+        Assert.Equal(expectedStatus, response.StatusCode);
+        Assert.Equal(0, repository.SaveCount);
+        Assert.Equal(0, repository.CancellationSaveCount);
+        Assert.Equal(0, factory.Inventories.SaveCallCount);
+
+        if (scenario is "ready" or "save-conflict" or "unexpected")
+        {
+            Assert.Equal(1, repository.DispatchSaveCount);
+            Assert.Equal(TransferStatus.Dispatched, transfer.Status);
+            Assert.Equal(factory.OccurredAt, transfer.DispatchedAt);
+            Assert.Equal(factory.User.Id, transfer.DispatchedByUserId);
+            Assert.Equal(6, inventory.QuantityOnHand);
+            var movement = Assert.Single(inventory.PendingMovements);
+            Assert.Equal(-4, movement.QuantityChange);
+            Assert.Equal(StockMovementType.Removal, movement.Type);
+            Assert.Equal(factory.OccurredAt, movement.OccurredAt);
+            if (scenario == "ready")
+            {
+                Assert.Same(transfer, repository.SavedTransfer);
+                Assert.Same(inventory, Assert.Single(repository.DispatchInventories));
+                Assert.Empty(await response.Content.ReadAsStringAsync());
+            }
+            else
+                Assert.Null(repository.SavedTransfer);
+        }
+        else
+        {
+            Assert.Equal(0, repository.DispatchSaveCount);
+            Assert.Equal(originalStatus, transfer.Status);
+            Assert.Equal(startingQuantity, inventory.QuantityOnHand);
+            Assert.Empty(inventory.PendingMovements);
+        }
+
+        if (expectedStatus != HttpStatusCode.NoContent)
+        {
+            var problem = await response.Content
+                .ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+            Assert.NotNull(problem);
+            Assert.Equal((int)expectedStatus, problem.Status);
+            Assert.DoesNotContain("Sensitive dispatch failure detail.",
+                await response.Content.ReadAsStringAsync());
+        }
+    }
+
     private sealed class RecordingTransferRepository : ITransferRepository
     {
         public int SaveCount { get; private set; }
         public int CancellationSaveCount { get; private set; }
+        public int DispatchSaveCount { get; private set; }
+        public Exception? DispatchFailure { get; init; }
+        public IReadOnlyList<StockFlow.Domain.Entities.Inventory> DispatchInventories
+            { get; private set; } = [];
         public Transfer? SavedTransfer { get; private set; }
         public (Transfer Transfer, Guid Version)? Loaded { get; set; }
         public int LookupCount { get; private set; }
@@ -325,6 +447,20 @@ public sealed class CreateTransferEndpointTests
             cancellationToken.ThrowIfCancellationRequested();
             CancellationSaveCount++;
             SavedTransfer = transfer;
+            return Task.CompletedTask;
+        }
+
+        public Task SaveDispatchAsync(
+            Transfer transfer,
+            IReadOnlyList<StockFlow.Domain.Entities.Inventory> sourceInventories,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DispatchSaveCount++;
+            if (DispatchFailure is { } failure)
+                return Task.FromException(failure);
+            SavedTransfer = transfer;
+            DispatchInventories = sourceInventories.ToArray();
             return Task.CompletedTask;
         }
 

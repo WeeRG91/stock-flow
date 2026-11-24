@@ -521,6 +521,48 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.TransferReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConfirmedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TransferId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransferId");
+
+                    b.ToTable("TransferReceipts", (string)null);
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.TransferReceiptLine", b =>
+                {
+                    b.Property<Guid>("TransferReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TransferLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReceivedQuantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TransferReceiptId", "TransferLineId");
+
+                    b.HasIndex("TransferLineId");
+
+                    b.ToTable("TransferReceiptLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TransferReceiptLines_ReceivedQuantity_Positive", "\"ReceivedQuantity\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.Warehouse", b =>
                 {
                     b.Property<Guid>("Id")
@@ -687,6 +729,30 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("StockFlow.Domain.Entities.TransferReceipt", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.Transfer", null)
+                        .WithMany()
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.TransferReceiptLine", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.TransferLine", null)
+                        .WithMany()
+                        .HasForeignKey("TransferLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("StockFlow.Domain.Entities.TransferReceipt", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("TransferReceiptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("StockFlow.Domain.Entities.GoodsReceipt", b =>
                 {
                     b.Navigation("Lines");
@@ -698,6 +764,11 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("StockFlow.Domain.Entities.Transfer", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.TransferReceipt", b =>
                 {
                     b.Navigation("Lines");
                 });

@@ -314,6 +314,17 @@ namespace StockFlow.Domain.Entities
             _pendingReceipts.Add(receipt);
         }
 
+        public void AcknowledgePersistedReceipts(
+            IEnumerable<Guid> receiptIds)
+        {
+            ArgumentNullException.ThrowIfNull(receiptIds);
+
+            var persistedIds = receiptIds.ToHashSet();
+
+            _pendingReceipts.RemoveAll(
+                receipt => persistedIds.Contains(receipt.Id));
+        }
+
         private void EnsureDraft()
         {
             if (Status != TransferStatus.Draft)

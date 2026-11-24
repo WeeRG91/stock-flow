@@ -4,6 +4,7 @@ using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Exceptions;
 using StockFlow.Domain.Entities;
 using StockFlow.Domain.Enums;
+using InventoryEntity = StockFlow.Domain.Entities.Inventory;
 
 namespace StockFlow.Infrastructure.Persistence.Repositories
 {
@@ -184,6 +185,123 @@ namespace StockFlow.Infrastructure.Persistence.Repositories
             {
                 _saveFailed = true;
                 throw;
+            }
+        }
+
+        public async Task SaveDispatchAsync(
+            Transfer transfer,
+            IReadOnlyList<InventoryEntity> sourceInventories,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(transfer);
+            ArgumentNullException.ThrowIfNull(sourceInventories);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_saveFailed)
+            {
+                throw new InvalidOperationException(
+                    "A previous save failed. Discard this scope and its DbContext.");
+            }
+
+            if (_context.Database.CurrentTransaction is not null ||
+                System.Transactions.Transaction.Current is not null)
+            {
+                throw new InvalidOperationException(
+                    "The dispatch save must own its commit boundary.");
+            }
+
+            var transferEntry = _context.Entry(transfer);
+
+            if (transferEntry.State is not
+                (EntityState.Unchanged or EntityState.Modified) ||
+                transferEntry.Property(item => item.Status).OriginalValue
+                    != TransferStatus.Draft ||
+                transfer.Status != TransferStatus.Dispatched)
+            {
+                throw new InvalidOperationException(
+                    "Dispatch requires a tracked Draft-to-Dispatched transition.");
+            }
+
+            var remainingProductIds = transfer.Lines
+                .Select(line => line.ProductId)
+                .ToHashSet();
+
+            if (sourceInventories.Count != remainingProductIds.Count)
+            {
+                throw new InvalidOperationException(
+                    "Dispatch requires one source inventory per transfer line.");
+            }
+
+            foreach (var inventory in sourceInventories)
+            {
+                if (inventory is null)
+                {
+                    throw new InvalidOperationException(
+                        "A source inventory must not be null.");
+                }
+
+                if (inventory.WarehouseId != transfer.SourceWarehouseId ||
+                    !remainingProductIds.Remove(inventory.ProductId))
+                {
+                    throw new InvalidOperationException(
+                        "Source inventories must match the transfer products and source warehouse.");
+                }
+
+                var inventoryEntry = _context.Entry(inventory);
+
+                if (inventoryEntry.State is not
+                    (EntityState.Unchanged or EntityState.Modified))
+                {
+                    throw new InvalidOperationException(
+                        "Dispatch requires existing inventories tracked by this DbContext.");
+                }
+            }
+
+            var changes = sourceInventories
+                .Select(inventory => (
+                    Inventory: inventory,
+                    Movements: inventory.PendingMovements.ToArray()))
+                .ToArray();
+
+            try
+            {
+                transferEntry.Property<Guid>("Version").CurrentValue = Guid.NewGuid();
+
+                foreach (var (_, movements) in changes)
+                {
+                    foreach (var movement in movements)
+                    {
+                        if (_context.Entry(movement).State != EntityState.Detached)
+                        {
+                            throw new InvalidOperationException(
+                                "A pending movement is already tracked. Discard this scope.");
+                        }
+
+                        _context.StockMovements.Add(movement);
+                    }
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _saveFailed = true;
+
+                throw new TransferConflictException(
+                    transfer.Id,
+                    "The transfer or source inventory changed during dispatch. " +
+                    "Reload it and try again.");
+            }
+            catch
+            {
+                _saveFailed = true;
+                throw;
+            }
+
+            foreach (var (inventory, movements) in changes)
+            {
+                inventory.AcknowledgePersistedMovements(
+                    movements.Select(movement => movement.Id).ToArray());
             }
         }
 

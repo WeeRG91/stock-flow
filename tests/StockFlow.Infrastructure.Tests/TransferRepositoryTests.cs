@@ -199,6 +199,121 @@ public sealed class TransferRepositoryTests
         Assert.Equal(1, interceptor.CallCount);
     }
 
+    [Theory]
+    [InlineData("success")]
+    [InlineData("concurrency")]
+    [InlineData("failure")]
+    public async Task SaveDispatchAsync_StagesChangesAndAcknowledgesOnlyAfterSuccess(
+        string outcome)
+    {
+        var occurredAt = new DateTimeOffset(2026, 11, 23, 11, 0, 0, TimeSpan.Zero);
+        var transfer = new Transfer(
+            Guid.NewGuid(), "BRU", "Brussels",
+            Guid.NewGuid(), "LIE", "Liège", occurredAt.AddHours(-1), Guid.NewGuid());
+        var productId = Guid.NewGuid();
+        transfer.AddLine(productId, "CHAIR", "Office chair", 4);
+        var inventory = new StockFlow.Domain.Entities.Inventory(
+            productId, transfer.SourceWarehouseId);
+        inventory.ReceiveStock(10, "Opening stock", occurredAt.AddHours(-1));
+        inventory.AcknowledgePersistedMovements(
+            inventory.PendingMovements.Select(movement => movement.Id).ToArray());
+        var originalVersion = Guid.NewGuid();
+        StockMovement? pending = null;
+        var failure = new InvalidOperationException("Simulated persistence failure.");
+
+        var interceptor = new InspectEditSaveInterceptor(context =>
+        {
+            var header = context.Entry(transfer);
+            Assert.Equal(EntityState.Modified, header.State);
+            Assert.Equal(TransferStatus.Draft,
+                header.Property(item => item.Status).OriginalValue);
+            Assert.Equal(TransferStatus.Dispatched, transfer.Status);
+            var version = header.Property<Guid>("Version");
+            Assert.Equal(originalVersion, version.OriginalValue);
+            Assert.NotEqual(originalVersion, version.CurrentValue);
+            Assert.NotEqual(Guid.Empty, version.CurrentValue);
+            Assert.True(version.IsModified);
+
+            var line = Assert.Single(context.ChangeTracker.Entries<TransferLine>());
+            Assert.Equal(EntityState.Modified, line.State);
+            Assert.Equal(0, line.Property(item => item.DispatchedQuantity).OriginalValue);
+            Assert.Equal(4, line.Entity.DispatchedQuantity);
+
+            var balance = Assert.Single(
+                context.ChangeTracker.Entries<StockFlow.Domain.Entities.Inventory>());
+            Assert.Same(inventory, balance.Entity);
+            Assert.Equal(EntityState.Modified, balance.State);
+            Assert.Equal(10, balance.Property(item => item.QuantityOnHand).OriginalValue);
+            Assert.Equal(6, balance.Entity.QuantityOnHand);
+            Assert.Equal(7u, balance.Property<uint>("Version").OriginalValue);
+
+            var movement = Assert.Single(context.ChangeTracker.Entries<StockMovement>());
+            Assert.Equal(EntityState.Added, movement.State);
+            Assert.Same(pending, movement.Entity);
+            Assert.Equal(inventory.Id, movement.Entity.InventoryId);
+            Assert.Equal(-4, movement.Entity.QuantityChange);
+            Assert.Equal(StockMovementType.Removal, movement.Entity.Type);
+            Assert.Equal(occurredAt, movement.Entity.OccurredAt);
+            // Pending movements must remain unacknowledged while saving.
+            Assert.Same(pending, Assert.Single(inventory.PendingMovements));
+
+            if (outcome == "concurrency")
+                throw new DbUpdateConcurrencyException("Simulated stale inventory.");
+            if (outcome == "failure")
+                throw failure;
+        });
+
+        var options = new DbContextOptionsBuilder<StockFlowDbContext>()
+            .UseNpgsql("Host=localhost;Database=unused_transfer_test")
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var context = new StockFlowDbContext(options);
+        var transferVersion = context.Transfers.Attach(transfer).Property<Guid>("Version");
+        transferVersion.CurrentValue = originalVersion;
+        transferVersion.OriginalValue = originalVersion;
+        transferVersion.IsModified = false;
+        var inventoryVersion = context.Inventories.Attach(inventory).Property<uint>("Version");
+        inventoryVersion.CurrentValue = 7u;
+        inventoryVersion.OriginalValue = 7u;
+        inventoryVersion.IsModified = false;
+
+        transfer.Dispatch(occurredAt, Guid.NewGuid());
+        inventory.RemoveStock(4, $"Transfer {transfer.Id} dispatched", occurredAt);
+        pending = Assert.Single(inventory.PendingMovements);
+        var repository = new TransferRepository(context);
+
+        if (outcome == "success")
+        {
+            await repository.SaveDispatchAsync(transfer, [inventory]);
+            Assert.Empty(inventory.PendingMovements);
+            // Suppressing database execution bypasses EF's normal state acceptance.
+            // Model the tracking state after a successful real SaveChangesAsync.
+            context.ChangeTracker.AcceptAllChanges();
+        }
+        else
+        {
+            if (outcome == "concurrency")
+            {
+                var error = await Assert.ThrowsAsync<TransferConflictException>(
+                    () => repository.SaveDispatchAsync(transfer, [inventory]));
+                Assert.Equal(transfer.Id, error.TransferId);
+            }
+            else
+            {
+                var error = await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => repository.SaveDispatchAsync(transfer, [inventory]));
+                Assert.Same(failure, error);
+            }
+
+            Assert.Same(pending, Assert.Single(inventory.PendingMovements));
+        }
+
+        // A second call must never stage the dispatch a second time.
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repository.SaveDispatchAsync(transfer, [inventory]));
+        Assert.Equal(1, interceptor.CallCount);
+    }
+
     private sealed class InspectEditSaveInterceptor(
         Action<StockFlowDbContext> inspect) : SaveChangesInterceptor
     {

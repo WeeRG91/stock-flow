@@ -8,6 +8,56 @@ namespace StockFlow.Infrastructure.Tests;
 public sealed class TransferModelTests
 {
     [Fact]
+    public void Model_MapsTransferReceiptsAndProtectedLines()
+    {
+        var options = new DbContextOptionsBuilder<StockFlowDbContext>()
+            .UseNpgsql("Host=localhost;Database=stockflow_model_test")
+            .Options;
+
+        using var context = new StockFlowDbContext(options);
+
+        var receipt = context.Model.FindEntityType(typeof(TransferReceipt));
+        Assert.NotNull(receipt);
+        Assert.Equal("TransferReceipts", receipt.GetTableName());
+
+        var id = receipt.FindProperty(nameof(TransferReceipt.Id));
+        Assert.NotNull(id);
+        Assert.Equal(ValueGenerated.Never, id.ValueGenerated);
+
+        var navigation = receipt.FindNavigation(nameof(TransferReceipt.Lines));
+        Assert.NotNull(navigation);
+        Assert.Equal("_lines", navigation.FieldInfo?.Name);
+        Assert.Equal(PropertyAccessMode.Field, navigation.GetPropertyAccessMode());
+
+        var line = context.Model.FindEntityType(typeof(TransferReceiptLine));
+        Assert.NotNull(line);
+        Assert.Equal("TransferReceiptLines", line.GetTableName());
+
+        var key = line.FindPrimaryKey();
+        Assert.NotNull(key);
+        Assert.Equal(
+            new[] { "TransferReceiptId", nameof(TransferReceiptLine.TransferLineId) },
+            key.Properties.Select(property => property.Name).ToArray());
+
+        var receiptId = line.FindProperty("TransferReceiptId");
+        Assert.NotNull(receiptId);
+        Assert.True(receiptId.IsShadowProperty());
+        Assert.False(receiptId.IsNullable);
+
+        Assert.Contains(receipt.GetForeignKeys(), foreignKey =>
+            foreignKey.PrincipalEntityType.ClrType == typeof(Transfer));
+        Assert.Contains(line.GetForeignKeys(), foreignKey =>
+            foreignKey.PrincipalEntityType.ClrType == typeof(TransferReceipt));
+        Assert.Contains(line.GetForeignKeys(), foreignKey =>
+            foreignKey.PrincipalEntityType.ClrType == typeof(TransferLine));
+
+        Assert.All(receipt.GetForeignKeys(), foreignKey =>
+            Assert.Equal(DeleteBehavior.Restrict, foreignKey.DeleteBehavior));
+        Assert.All(line.GetForeignKeys(), foreignKey =>
+            Assert.Equal(DeleteBehavior.Restrict, foreignKey.DeleteBehavior));
+    }
+
+    [Fact]
     public void Model_MapsTransferConcurrencyAndProtectedLines()
     {
         var options = new DbContextOptionsBuilder<StockFlowDbContext>()

@@ -99,6 +99,30 @@ namespace StockFlow.API.Authorization
                             StockFlowRoles.Administrator,
                             StockFlowRoles.InventoryManager,
                             StockFlowRoles.WarehouseStaff));
+
+                options.AddPolicy(
+                    StockFlowPolicies.TransfersDispatch,
+                    policy => policy
+                        .RequireAuthenticatedUser()
+                        .RequireRole(
+                            StockFlowRoles.Administrator,
+                            StockFlowRoles.InventoryManager,
+                            StockFlowRoles.WarehouseStaff));
+
+                options.AddPolicy(
+                    StockFlowPolicies.TransfersReceive,
+                    policy => policy
+                        .RequireAuthenticatedUser()
+                        .RequireRole(
+                            StockFlowRoles.Administrator,
+                            StockFlowRoles.InventoryManager,
+                            StockFlowRoles.WarehouseStaff));
+
+                options.AddPolicy(
+                    StockFlowPolicies.TransfersRead,
+                    policy => policy
+                        .RequireAuthenticatedUser()
+                        .RequireRole(readRoles));
             });
 
             return services;

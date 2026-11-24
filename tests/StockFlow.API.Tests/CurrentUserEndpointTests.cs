@@ -19,7 +19,8 @@ public class CurrentUserEndpointTests
         StockFlowPolicies.CatalogRead,
         StockFlowPolicies.InventoryRead,
         StockFlowPolicies.SuppliersRead,
-        StockFlowPolicies.PurchaseOrdersRead
+        StockFlowPolicies.PurchaseOrdersRead,
+        StockFlowPolicies.TransfersRead
     ];
 
     public static IEnumerable<object[]> CapabilityCases()
@@ -34,6 +35,8 @@ public class CurrentUserEndpointTests
                 .Append(StockFlowPolicies.PurchaseOrdersManage)
                 .Append(StockFlowPolicies.PurchaseOrdersApprove)
                 .Append(StockFlowPolicies.TransfersManage)
+                .Append(StockFlowPolicies.TransfersDispatch)
+                .Append(StockFlowPolicies.TransfersReceive)
                 .ToArray()
         ];
 
@@ -43,6 +46,8 @@ public class CurrentUserEndpointTests
             ReadCapabilities
                 .Append(StockFlowPolicies.InventoryReceive)
                 .Append(StockFlowPolicies.TransfersManage)
+                .Append(StockFlowPolicies.TransfersDispatch)
+                .Append(StockFlowPolicies.TransfersReceive)
                 .ToArray()
         ];
 
@@ -52,6 +57,8 @@ public class CurrentUserEndpointTests
             ReadCapabilities
                 .Append(StockFlowPolicies.InventoryReceive)
                 .Append(StockFlowPolicies.TransfersManage)
+                .Append(StockFlowPolicies.TransfersDispatch)
+                .Append(StockFlowPolicies.TransfersReceive)
                 .ToArray()
         ];
 
@@ -157,7 +164,9 @@ public class CurrentUserEndpointTests
                 .Append(StockFlowPolicies.InventoryReceive)
                 .Append(StockFlowPolicies.SuppliersManage)
                 .Append(StockFlowPolicies.PurchaseOrdersManage)
-                .Append(StockFlowPolicies.TransfersManage),
+                .Append(StockFlowPolicies.TransfersManage)
+                .Append(StockFlowPolicies.TransfersDispatch)
+                .Append(StockFlowPolicies.TransfersReceive),
             body.Capabilities);
     }
 

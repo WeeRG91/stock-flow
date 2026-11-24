@@ -7,6 +7,9 @@ internal sealed class FakeTransferRepository : ITransferRepository
 {
     public int SaveCallCount { get; private set; }
     public int CancellationSaveCallCount { get; private set; }
+    public int DispatchSaveCallCount { get; private set; }
+    public IReadOnlyList<StockFlow.Domain.Entities.Inventory> LastDispatchInventories
+        { get; private set; } = [];
     public Transfer? LastSavedTransfer { get; private set; }
     public CancellationToken SaveToken { get; private set; }
     public Exception? SaveFailure { get; set; }
@@ -45,6 +48,25 @@ internal sealed class FakeTransferRepository : ITransferRepository
         }
 
         LastSavedTransfer = transfer;
+        return Task.CompletedTask;
+    }
+
+    public Task SaveDispatchAsync(
+        Transfer transfer,
+        IReadOnlyList<StockFlow.Domain.Entities.Inventory> sourceInventories,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DispatchSaveCallCount++;
+        SaveToken = cancellationToken;
+
+        if (SaveFailure is { } failure)
+        {
+            return Task.FromException(failure);
+        }
+
+        LastSavedTransfer = transfer;
+        LastDispatchInventories = sourceInventories.ToArray();
         return Task.CompletedTask;
     }
 

@@ -6,7 +6,8 @@
         public Guid TransferId { get; }
         public DateTimeOffset ConfirmedAt { get; }
         public Guid ConfirmedByUserId { get; }
-        public IReadOnlyList<TransferReceiptLine> Lines { get; }
+        private readonly List<TransferReceiptLine> _lines = new();
+        public IReadOnlyList<TransferReceiptLine> Lines => _lines.AsReadOnly();
 
         public TransferReceipt(
             Guid id,
@@ -72,7 +73,19 @@
             TransferId = transferId;
             ConfirmedAt = confirmedAt;
             ConfirmedByUserId = confirmedByUserId;
-            Lines = Array.AsReadOnly(receiptLines);
+            _lines.AddRange(receiptLines);
+        }
+
+        private TransferReceipt(
+            Guid id,
+            Guid transferId,
+            DateTimeOffset confirmedAt,
+            Guid confirmedByUserId)
+        {
+            Id = id;
+            TransferId = transferId;
+            ConfirmedAt = confirmedAt;
+            ConfirmedByUserId = confirmedByUserId;
         }
     }
 }
