@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using StockFlow.Application.Authorization;
 using StockFlow.Application.Transfers;
 using StockFlow.Application.Transfers.GetTransfers;
+using StockFlow.Application.Transfers.GetTransferReceipts;
 using StockFlow.Domain.Enums;
 
 namespace StockFlow.API.Tests;
@@ -103,6 +104,14 @@ public sealed class GetTransfersEndpointTests
 
     private sealed class RecordingReader : ITransferReadService
     {
+        public Task<IReadOnlyList<TransferReceiptHistoryItemDto>?> GetReceiptsAsync(
+            Guid transferId,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException(
+                "These tests must not request transfer receipt history.");
+        }
+
         public Task<TransferDetailsDto?> GetByIdAsync(
             Guid transferId,
             CancellationToken cancellationToken = default)
@@ -117,7 +126,10 @@ public sealed class GetTransfersEndpointTests
         public bool Fail { get; init; }
         public TransferSummaryDto Item { get; } = new(Guid.NewGuid(), "BRU", "Brussels",
             "LIE", "Liège", TransferStatus.Dispatched,
-            new DateTimeOffset(2026, 11, 23, 11, 0, 0, TimeSpan.Zero), 2);
+            new DateTimeOffset(2026, 11, 23, 11, 0, 0, TimeSpan.Zero), 2)
+        {
+            DispatchedAt = new DateTimeOffset(2026, 11, 23, 12, 0, 0, TimeSpan.Zero)
+        };
 
         public Task<GetTransfersResult> GetPageAsync(int pageNumber, int pageSize,
             TransferStatus? status, string? search, CancellationToken cancellationToken = default)

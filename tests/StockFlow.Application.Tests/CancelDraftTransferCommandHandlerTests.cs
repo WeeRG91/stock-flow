@@ -30,6 +30,9 @@ public sealed class CancelDraftTransferCommandHandlerTests
         Assert.Same(fixture.Transfer, fixture.Transfers.LastSavedTransfer);
         Assert.Equal(cancellation.Token, fixture.Transfers.LookupToken);
         Assert.Equal(cancellation.Token, fixture.Transfers.SaveToken);
+        Assert.Equal(fixture.Transfer.Id,
+            Assert.Single(fixture.Notifier.Notifications).TransferId);
+        Assert.Equal(cancellation.Token, fixture.Notifier.LastToken);
     }
 
     [Theory]
@@ -111,6 +114,7 @@ public sealed class CancelDraftTransferCommandHandlerTests
         Assert.Equal(originalStatus, fixture.Transfer.Status);
         Assert.Equal(0, fixture.Transfers.CancellationSaveCallCount);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     [Fact]
@@ -127,20 +131,25 @@ public sealed class CancelDraftTransferCommandHandlerTests
         AssertUnchangedDraft(fixture);
     }
 
-    [Fact]
-    public async Task HandleAsync_WhenSaveFails_PropagatesFailureWithoutRetry()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HandleAsync_WhenSaveFails_PropagatesFailureWithoutRetry(bool conflict)
     {
         var fixture = new Fixture();
-        var failure = new TransferConflictException(fixture.Transfer.Id, "Stale transfer.");
+        Exception failure = conflict
+            ? new TransferConflictException(fixture.Transfer.Id, "Stale transfer.")
+            : new InvalidOperationException("Simulated persistence failure.");
         fixture.Transfers.SaveFailure = failure;
 
-        var error = await Assert.ThrowsAsync<TransferConflictException>(
+        var error = await Record.ExceptionAsync(
             () => fixture.Handler.HandleAsync(fixture.Command));
 
         Assert.Same(failure, error);
         Assert.Equal(1, fixture.Transfers.CancellationSaveCallCount);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
         Assert.Null(fixture.Transfers.LastSavedTransfer);
+        Assert.Empty(fixture.Notifier.Notifications);
         // Domain mutation remains in memory; this does not imply a committed save.
         Assert.Equal(TransferStatus.Cancelled, fixture.Transfer.Status);
     }
@@ -153,12 +162,14 @@ public sealed class CancelDraftTransferCommandHandlerTests
         Assert.Equal(4, Assert.Single(fixture.Transfer.Lines).Quantity);
         Assert.Equal(0, fixture.Transfers.CancellationSaveCallCount);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     private sealed class Fixture
     {
         public FakeCurrentUser User { get; } = new() { UserId = Guid.NewGuid() };
         public FakeTransferRepository Transfers { get; } = new();
+        public FakeTransferChangeNotifier Notifier { get; } = new();
         public FakeClock Clock { get; } = new()
         {
             UtcNow = new DateTimeOffset(2026, 11, 20, 11, 0, 0, TimeSpan.Zero)
@@ -178,7 +189,14 @@ public sealed class CancelDraftTransferCommandHandlerTests
             var version = Guid.NewGuid();
             Transfers.Loaded = (Transfer, version);
             Command = new CancelDraftTransferCommand(Transfer.Id, version);
-            Handler = new CancelDraftTransferCommandHandler(Transfers, User, Clock);
+            Notifier.OnNotify = notification =>
+            {
+                Assert.Equal(1, Transfers.CancellationSaveCallCount);
+                Assert.Same(Transfer, Transfers.LastSavedTransfer);
+                Assert.Equal(TransferStatus.Cancelled, Transfer.Status);
+                Assert.Equal(Transfer.Id, notification.TransferId);
+            };
+            Handler = new CancelDraftTransferCommandHandler(Transfers, User, Clock, Notifier);
         }
     }
 }

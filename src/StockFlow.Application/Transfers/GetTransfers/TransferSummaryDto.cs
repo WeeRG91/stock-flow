@@ -10,5 +10,8 @@ namespace StockFlow.Application.Transfers.GetTransfers
         string DestinationWarehouseName,
         TransferStatus Status,
         DateTimeOffset CreatedAt,
-        int LineCount);
+        int LineCount)
+    {
+        public DateTimeOffset? DispatchedAt { get; init; }
+    }
 }

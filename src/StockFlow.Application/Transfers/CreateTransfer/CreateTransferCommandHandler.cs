@@ -1,4 +1,5 @@
 ﻿using StockFlow.Application.Abstractions;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Authorization;
@@ -15,24 +16,29 @@ namespace StockFlow.Application.Transfers.CreateTransfer
         private readonly ITransferRepository _transfers;
         private readonly IClock _clock;
 
+        private readonly ITransferChangeNotifier _notifier;
+
         public CreateTransferCommandHandler(
             ICurrentUser currentUser,
             IWarehouseRepository warehouses,
             IProductRepository products,
             ITransferRepository transfers,
-            IClock clock)
+            IClock clock,
+            ITransferChangeNotifier notifier)
         {
             ArgumentNullException.ThrowIfNull(currentUser);
             ArgumentNullException.ThrowIfNull(warehouses);
             ArgumentNullException.ThrowIfNull(products);
             ArgumentNullException.ThrowIfNull(transfers);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(notifier);
 
             _currentUser = currentUser;
             _warehouses = warehouses;
             _products = products;
             _transfers = transfers;
             _clock = clock;
+            _notifier = notifier;
         }
 
         public async Task<CreateTransferResult> HandleAsync(
@@ -74,6 +80,10 @@ namespace StockFlow.Application.Transfers.CreateTransfer
             }
 
             await _transfers.SaveDraftAsync(transfer, cancellationToken);
+
+            await _notifier.NotifyAsync(
+                new TransferChanged(transfer.Id),
+                cancellationToken);
 
             return new CreateTransferResult(
                 transfer.Id,

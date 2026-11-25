@@ -11,6 +11,8 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { PurchaseOrdersPage } from "@/features/purchase-orders/PurchaseOrdersPage";
 import { PurchaseOrderDetailsPage } from "@/features/purchase-orders/PurchaseOrderDetailsPage";
 import { PurchasingNotificationsPage } from "@/features/purchasing-notification/PurchasingNotificationsPage";
+import { TransfersPage } from "@/features/transfers/TransfersPage";
+import { TransferDetailsPage } from "@/features/transfers/TransferDetailsPage";
 
 export function AppRoutes() {
   return (
@@ -33,6 +35,8 @@ export function AppRoutes() {
           path="/purchasing-notifications"
           element={<PurchasingNotificationsPage />}
         />
+        <Route path="/transfers" element={<TransfersPage />} />
+        <Route path="/transfers/:id" element={<TransferDetailsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

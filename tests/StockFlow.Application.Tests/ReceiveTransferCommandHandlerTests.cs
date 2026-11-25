@@ -54,6 +54,11 @@ public sealed class ReceiveTransferCommandHandlerTests
         Assert.Equal(cancellation.Token, fixture.Receipts.LookupToken);
         Assert.Equal(cancellation.Token, fixture.Transfers.LookupToken);
         Assert.Equal(cancellation.Token, fixture.Receipts.SaveToken);
+        Assert.Equal(fixture.Transfer.Id,
+            Assert.Single(fixture.TransferNotifier.Notifications).TransferId);
+        Assert.Single(fixture.InventoryNotifier.Notifications);
+        Assert.Equal(cancellation.Token, fixture.TransferNotifier.LastToken);
+        Assert.Equal(cancellation.Token, fixture.InventoryNotifier.LastCancellationToken);
         Assert.Equal(10, fixture.Source.QuantityOnHand);
         Assert.Empty(fixture.Source.PendingMovements);
         AssertNoSeparateSaves(fixture);
@@ -75,6 +80,9 @@ public sealed class ReceiveTransferCommandHandlerTests
         Assert.Equal(10, fixture.Destination.QuantityOnHand);
         Assert.Equal(3, Assert.Single(fixture.Destination.PendingMovements).QuantityChange);
         Assert.Equal(1, fixture.Receipts.SaveCallCount);
+        Assert.Equal(fixture.Transfer.Id,
+            Assert.Single(fixture.TransferNotifier.Notifications).TransferId);
+        Assert.Single(fixture.InventoryNotifier.Notifications);
     }
 
     [Fact]
@@ -103,6 +111,7 @@ public sealed class ReceiveTransferCommandHandlerTests
         Assert.Equal(0, fixture.Receipts.SaveCallCount);
         Assert.Equal(7, fixture.Destination.QuantityOnHand);
         Assert.Empty(fixture.Destination.PendingMovements);
+        AssertNoNotifications(fixture);
     }
 
     [Fact]
@@ -123,6 +132,7 @@ public sealed class ReceiveTransferCommandHandlerTests
         Assert.Equal(2, result.Lines.Count);
         Assert.Equal(0, fixture.Transfers.LookupCallCount);
         Assert.Equal(0, fixture.Receipts.SaveCallCount);
+        AssertNoNotifications(fixture);
     }
 
     [Theory]
@@ -253,6 +263,7 @@ public sealed class ReceiveTransferCommandHandlerTests
         Assert.Equal(0, fixture.Receipts.SaveCallCount);
         Assert.Empty(fixture.Destination.PendingMovements);
         Assert.Equal(7, fixture.Destination.QuantityOnHand);
+        AssertNoNotifications(fixture);
     }
 
     [Theory]
@@ -328,7 +339,14 @@ public sealed class ReceiveTransferCommandHandlerTests
         Assert.Single(fixture.Destination.PendingMovements);
         // In-memory changes remain; discard this scope after the failed save.
         Assert.Equal(TransferStatus.PartiallyReceived, fixture.Transfer.Status);
+        AssertNoNotifications(fixture);
         AssertNoSeparateSaves(fixture);
+    }
+
+    private static void AssertNoNotifications(Fixture fixture)
+    {
+        Assert.Empty(fixture.TransferNotifier.Notifications);
+        Assert.Empty(fixture.InventoryNotifier.Notifications);
     }
 
     private static void AssertNoSeparateSaves(Fixture fixture)
@@ -350,6 +368,7 @@ public sealed class ReceiveTransferCommandHandlerTests
         Assert.Equal(10, fixture.Source.QuantityOnHand);
         Assert.Empty(fixture.Source.PendingMovements);
         Assert.Equal(0, fixture.Receipts.SaveCallCount);
+        AssertNoNotifications(fixture);
         AssertNoSeparateSaves(fixture);
     }
 
@@ -359,6 +378,8 @@ public sealed class ReceiveTransferCommandHandlerTests
         public FakeTransferReceiptRepository Receipts { get; } = new();
         public FakeTransferRepository Transfers { get; } = new();
         public FakeInventoryRepository Inventories { get; } = new();
+        public FakeTransferChangeNotifier TransferNotifier { get; } = new();
+        public FakeInventoryChangeNotifier InventoryNotifier { get; } = new();
         public FakeClock Clock { get; } = new()
         {
             UtcNow = new DateTimeOffset(2026, 11, 23, 11, 0, 0, TimeSpan.Zero)
@@ -382,7 +403,25 @@ public sealed class ReceiveTransferCommandHandlerTests
             Inventories.Add(Source);
             if (existing) Inventories.Add(Destination);
             Transfers.Loaded = (Transfer, Version);
-            Handler = new ReceiveTransferCommandHandler(User, Receipts, Transfers, Inventories, Clock);
+            TransferNotifier.OnNotify = notification =>
+            {
+                AssertReceiptSaved();
+                Assert.Equal(Transfer.Id, notification.TransferId);
+            };
+            InventoryNotifier.OnNotify = _ => AssertReceiptSaved();
+            Handler = new ReceiveTransferCommandHandler(
+                User, Receipts, Transfers, Inventories, Clock,
+                TransferNotifier, InventoryNotifier);
+        }
+
+        private void AssertReceiptSaved()
+        {
+            Assert.Equal(1, Receipts.SaveCallCount);
+            Assert.Same(Transfer, Receipts.LastSavedTransfer);
+            var receipt = Assert.IsType<TransferReceipt>(Receipts.LastSavedReceipt);
+            Assert.Equal(Transfer.Id, receipt.TransferId);
+            Assert.Contains(receipt, Transfer.PendingReceipts);
+            Assert.NotEmpty(Receipts.LastSavedInventories);
         }
 
         public ReceiveTransferCommand Command(int quantity = 2) =>

@@ -7,6 +7,7 @@ using StockFlow.Application.Transfers.CancelDraftTransfer;
 using StockFlow.Application.Transfers.CreateTransfer;
 using StockFlow.Application.Transfers.DispatchTransfer;
 using StockFlow.Application.Transfers.GetTransferById;
+using StockFlow.Application.Transfers.GetTransferReceipts;
 using StockFlow.Application.Transfers.GetTransfers;
 using StockFlow.Application.Transfers.ReceiveTransfer;
 using StockFlow.Application.Transfers.UpdateDraftTransfer;
@@ -25,6 +26,7 @@ namespace StockFlow.API.Controllers
         private readonly ReceiveTransferCommandHandler _receiveHandler;
         private readonly GetTransfersQueryHandler _listHandler;
         private readonly GetTransferByIdQueryHandler _detailsHandler;
+        private readonly GetTransferReceiptsQueryHandler _receiptHistoryHandler;
 
         public TransfersController(
             CreateTransferCommandHandler createHandler,
@@ -33,7 +35,8 @@ namespace StockFlow.API.Controllers
             DispatchTransferCommandHandler dispatchHandler,
             ReceiveTransferCommandHandler receiveHandler,
             GetTransfersQueryHandler listHandler,
-            GetTransferByIdQueryHandler detailsHandler)
+            GetTransferByIdQueryHandler detailsHandler,
+            GetTransferReceiptsQueryHandler receiptHistoryHandler)
         {
             ArgumentNullException.ThrowIfNull(createHandler);
             ArgumentNullException.ThrowIfNull(updateHandler);
@@ -42,6 +45,7 @@ namespace StockFlow.API.Controllers
             ArgumentNullException.ThrowIfNull(receiveHandler);
             ArgumentNullException.ThrowIfNull(listHandler);
             ArgumentNullException.ThrowIfNull(detailsHandler);
+            ArgumentNullException.ThrowIfNull(receiptHistoryHandler);
 
             _createHandler = createHandler;
             _updateHandler = updateHandler;
@@ -50,6 +54,7 @@ namespace StockFlow.API.Controllers
             _receiveHandler = receiveHandler;
             _listHandler = listHandler;
             _detailsHandler = detailsHandler;
+            _receiptHistoryHandler = receiptHistoryHandler;
         }
 
         [HttpGet("{id:guid}")]
@@ -66,6 +71,27 @@ namespace StockFlow.API.Controllers
         {
             var result = await _detailsHandler.HandleAsync(
                 new GetTransferByIdQuery(id),
+                cancellationToken);
+
+            return Ok(result);
+        }
+
+        [HttpGet("{id:guid}/receipts")]
+        [Authorize(Policy = StockFlowPolicies.TransfersRead)]
+        [ProducesResponseType(
+            typeof(IReadOnlyList<TransferReceiptHistoryItemDto>),
+            StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IReadOnlyList<TransferReceiptHistoryItemDto>>> GetReceipts(
+            [FromRoute] Guid id,
+            CancellationToken cancellationToken)
+        {
+            var result = await _receiptHistoryHandler.HandleAsync(
+                new GetTransferReceiptsQuery(id),
                 cancellationToken);
 
             return Ok(result);
@@ -122,35 +148,6 @@ namespace StockFlow.API.Controllers
                 command, cancellationToken);
 
             return StatusCode(StatusCodes.Status201Created, result);
-        }
-
-        [HttpPut("{id:guid}")]
-        [Authorize(Policy = StockFlowPolicies.TransfersManage)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> UpdateDraft(
-            [FromRoute] Guid id,
-            [FromBody] UpdateDraftTransferRequest request,
-            CancellationToken cancellationToken)
-        {
-            var lines = request.Lines!.Select(line =>
-            {
-                var validatedLine = line!;
-
-                return new UpdateDraftTransferLineCommand(
-                    validatedLine.ProductId!.Value,
-                    validatedLine.Quantity!.Value);
-            }).ToArray();
-
-            var command = new UpdateDraftTransferCommand(
-                id, request.ExpectedVersion!.Value, lines);
-
-            await _updateHandler.HandleAsync(command, cancellationToken);
-            return NoContent();
         }
 
         [HttpPost("{id:guid}/cancel")]
@@ -227,6 +224,35 @@ namespace StockFlow.API.Controllers
                 command, cancellationToken);
 
             return Ok(result);
+        }
+
+        [HttpPut("{id:guid}")]
+        [Authorize(Policy = StockFlowPolicies.TransfersManage)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> UpdateDraft(
+            [FromRoute] Guid id,
+            [FromBody] UpdateDraftTransferRequest request,
+            CancellationToken cancellationToken)
+        {
+            var lines = request.Lines!.Select(line =>
+            {
+                var validatedLine = line!;
+
+                return new UpdateDraftTransferLineCommand(
+                    validatedLine.ProductId!.Value,
+                    validatedLine.Quantity!.Value);
+            }).ToArray();
+
+            var command = new UpdateDraftTransferCommand(
+                id, request.ExpectedVersion!.Value, lines);
+
+            await _updateHandler.HandleAsync(command, cancellationToken);
+            return NoContent();
         }
     }
 }

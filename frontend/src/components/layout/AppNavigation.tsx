@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   Bell,
   Boxes,
   ClipboardList,
@@ -21,21 +22,29 @@ const navigationItems = [
     label: "Purchasing notifications",
     icon: Bell,
   },
+  { to: "/transfers", label: "Warehouse transfers", icon: ArrowLeftRight },
 ];
 
 export function AppNavigation({
   canReadPurchaseOrders,
+  canReadTransfers,
   unreadPurchasingCount,
 }: {
   canReadPurchaseOrders: boolean;
+  canReadTransfers: boolean;
   unreadPurchasingCount: number;
 }) {
-  const visibleItems = canReadPurchaseOrders
-    ? navigationItems
-    : navigationItems.filter(
-        ({ to }) =>
-          to !== "/purchase-orders" && to !== "/purchasing-notifications",
-      );
+  const visibleItems = navigationItems.filter(({ to }) => {
+    if (to === "/purchase-orders" || to === "/purchasing-notifications") {
+      return canReadPurchaseOrders;
+    }
+
+    if (to === "/transfers") {
+      return canReadTransfers;
+    }
+
+    return true;
+  });
 
   return (
     <nav aria-label="Main navigation">

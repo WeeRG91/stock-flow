@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using StockFlow.Application.Authorization;
 using StockFlow.Application.Transfers;
 using StockFlow.Application.Transfers.GetTransfers;
+using StockFlow.Application.Transfers.GetTransferReceipts;
 using StockFlow.Domain.Enums;
 
 namespace StockFlow.API.Tests;
@@ -90,6 +91,14 @@ public sealed class GetTransferByIdEndpointTests
 
     private sealed class RecordingReader : ITransferReadService
     {
+        public Task<IReadOnlyList<TransferReceiptHistoryItemDto>?> GetReceiptsAsync(
+            Guid transferId,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException(
+                "These tests must not request transfer receipt history.");
+        }
+
         public TransferDetailsDto? Details { get; init; }
         public bool Fail { get; init; }
         public int CallCount { get; private set; }

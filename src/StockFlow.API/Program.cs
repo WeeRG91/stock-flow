@@ -36,6 +36,7 @@ using StockFlow.Application.Transfers.CancelDraftTransfer;
 using StockFlow.Application.Transfers.CreateTransfer;
 using StockFlow.Application.Transfers.DispatchTransfer;
 using StockFlow.Application.Transfers.GetTransferById;
+using StockFlow.Application.Transfers.GetTransferReceipts;
 using StockFlow.Application.Transfers.GetTransfers;
 using StockFlow.Application.Transfers.ReceiveTransfer;
 using StockFlow.Application.Transfers.UpdateDraftTransfer;
@@ -88,9 +89,11 @@ builder.Services.AddScoped<DispatchTransferCommandHandler>();
 builder.Services.AddScoped<ReceiveTransferCommandHandler>();
 builder.Services.AddScoped<GetTransfersQueryHandler>();
 builder.Services.AddScoped<GetTransferByIdQueryHandler>();
+builder.Services.AddScoped<GetTransferReceiptsQueryHandler>();
 
 builder.Services.AddScoped<IInventoryChangeNotifier, SignalRInventoryChangeNotifier>();
 builder.Services.AddScoped<IPurchasingChangeNotifier, SignalRPurchasingChangeNotifier>();
+builder.Services.AddScoped<ITransferChangeNotifier, SignalRTransferChangeNotifier>();
 
 var connectionString = builder.Configuration.GetConnectionString("StockFlow");
 
@@ -259,6 +262,14 @@ app.MapHub<PurchasingHub>(
         options.CloseOnAuthenticationExpiration = true;
     })
     .RequireAuthorization(StockFlowPolicies.PurchaseOrdersRead);
+
+app.MapHub<TransferHub>(
+    "/hubs/transfers",
+    options =>
+    {
+        options.CloseOnAuthenticationExpiration = true;
+    })
+    .RequireAuthorization(StockFlowPolicies.TransfersRead);
 
 if (builder.Configuration.GetValue<bool>("RunDemoJob"))
 {

@@ -243,3 +243,114 @@ export interface GetPurchasingNotificationsResult {
   totalCount: number;
   unreadCount: number;
 }
+
+export type TransferStatus = 1 | 2 | 3 | 4 | 5;
+
+export interface TransferSummaryDto {
+  id: string;
+  sourceWarehouseCode: string;
+  sourceWarehouseName: string;
+  destinationWarehouseCode: string;
+  destinationWarehouseName: string;
+  status: TransferStatus;
+  createdAt: string;
+  dispatchedAt: string | null;
+  lineCount: number;
+}
+
+export interface GetTransfersResult {
+  items: TransferSummaryDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+export interface TransferLineDto {
+  id: string;
+  productId: string;
+  productSku: string;
+  productName: string;
+  quantity: number;
+  dispatchedQuantity: number;
+  receivedQuantity: number;
+  inTransitQuantity: number;
+}
+
+export interface TransferDetailsDto {
+  id: string;
+  sourceWarehouseId: string;
+  sourceWarehouseCode: string;
+  sourceWarehouseName: string;
+  destinationWarehouseId: string;
+  destinationWarehouseCode: string;
+  destinationWarehouseName: string;
+  status: TransferStatus;
+  createdAt: string;
+  createdByUserId: string;
+  dispatchedAt: string | null;
+  dispatchedByUserId: string | null;
+  cancelledAt: string | null;
+  cancelledByUserId: string | null;
+  receivedAt: string | null;
+  version: string;
+  lines: TransferLineDto[];
+}
+
+export interface CreateTransferLineRequest {
+  productId: string;
+  quantity: number;
+}
+
+export interface CreateTransferRequest {
+  sourceWarehouseId: string;
+  destinationWarehouseId: string;
+  lines: CreateTransferLineRequest[];
+}
+
+export interface CreateTransferResult {
+  transferId: string;
+  status: TransferStatus;
+  createdAt: string;
+  createdByUserId: string;
+}
+
+export interface UpdateDraftTransferRequest {
+  expectedVersion: string;
+  lines: CreateTransferLineRequest[];
+}
+
+export interface ReceiveTransferLineRequest {
+  transferLineId: string;
+  receivedQuantity: number;
+}
+
+export interface ReceiveTransferRequest {
+  receiptId: string;
+  expectedVersion: string;
+  lines: ReceiveTransferLineRequest[];
+}
+
+export interface ReceivedTransferLineDto {
+  transferLineId: string;
+  receivedQuantity: number;
+}
+
+export interface ReceiveTransferResult {
+  receiptId: string;
+  transferId: string;
+  confirmedAt: string;
+  confirmedByUserId: string;
+  lines: ReceivedTransferLineDto[];
+}
+
+export interface TransferReceiptHistoryLineDto {
+  transferLineId: string;
+  receivedQuantity: number;
+}
+
+export interface TransferReceiptHistoryItemDto {
+  receiptId: string;
+  confirmedAt: string;
+  confirmedByUserId: string;
+  lines: TransferReceiptHistoryLineDto[];
+}

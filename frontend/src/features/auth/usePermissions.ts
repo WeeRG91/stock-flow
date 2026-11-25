@@ -13,7 +13,11 @@ type Capability =
   | "Suppliers.Manage"
   | "BackgroundJobs.Manage"
   | "PurchaseOrders.Manage"
-  | "PurchaseOrders.Approve";
+  | "PurchaseOrders.Approve"
+  | "Transfers.Read"
+  | "Transfers.Manage"
+  | "Transfers.Dispatch"
+  | "Transfers.Receive";
 
 export function usePermissions() {
   const { user } = useOutletContext<AuthenticatedOutletContext>();

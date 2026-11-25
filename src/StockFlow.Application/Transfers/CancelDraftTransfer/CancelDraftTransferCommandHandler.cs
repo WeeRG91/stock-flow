@@ -1,4 +1,5 @@
 ﻿using StockFlow.Application.Abstractions;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Authorization;
@@ -12,19 +13,23 @@ namespace StockFlow.Application.Transfers.CancelDraftTransfer
         private readonly ITransferRepository _transfers;
         private readonly ICurrentUser _currentUser;
         private readonly IClock _clock;
+        private readonly ITransferChangeNotifier _notifier;
 
         public CancelDraftTransferCommandHandler(
             ITransferRepository transfers,
             ICurrentUser currentUser,
-            IClock clock)
+            IClock clock,
+            ITransferChangeNotifier notifier)
         {
             ArgumentNullException.ThrowIfNull(transfers);
             ArgumentNullException.ThrowIfNull(currentUser);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(notifier);
 
             _transfers = transfers;
             _currentUser = currentUser;
             _clock = clock;
+            _notifier = notifier;
         }
 
         public async Task HandleAsync(
@@ -85,6 +90,10 @@ namespace StockFlow.Application.Transfers.CancelDraftTransfer
 
             await _transfers.SaveCancellationAsync(
                 transfer, cancellationToken);
+
+            await _notifier.NotifyAsync(
+                new TransferChanged(transfer.Id),
+                cancellationToken);
         }
     }
 }

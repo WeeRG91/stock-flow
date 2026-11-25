@@ -1,4 +1,5 @@
 ﻿using StockFlow.Application.Abstractions;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Authorization;
 using StockFlow.Application.Exceptions;
@@ -12,19 +13,23 @@ namespace StockFlow.Application.Transfers.UpdateDraftTransfer
         private readonly ITransferRepository _transfers;
         private readonly ICurrentUser _currentUser;
         private readonly IProductRepository _products;
+        private readonly ITransferChangeNotifier _notifier;
 
         public UpdateDraftTransferCommandHandler(
             ITransferRepository transfers,
             ICurrentUser currentUser,
-            IProductRepository products)
+            IProductRepository products,
+            ITransferChangeNotifier notifier)
         {
             ArgumentNullException.ThrowIfNull(transfers);
             ArgumentNullException.ThrowIfNull(currentUser);
             ArgumentNullException.ThrowIfNull(products);
+            ArgumentNullException.ThrowIfNull(notifier);
 
             _transfers = transfers;
             _currentUser = currentUser;
             _products = products;
+            _notifier = notifier;
         }
 
         public async Task HandleAsync(
@@ -42,7 +47,12 @@ namespace StockFlow.Application.Transfers.UpdateDraftTransfer
             cancellationToken.ThrowIfCancellationRequested();
 
             transfer.ReplaceDraftLines(drafts);
+
             await _transfers.SaveDraftAsync(transfer, cancellationToken);
+
+            await _notifier.NotifyAsync(
+                new TransferChanged(transfer.Id),
+                cancellationToken);
         }
 
         private async Task RequireManagingUserAsync(

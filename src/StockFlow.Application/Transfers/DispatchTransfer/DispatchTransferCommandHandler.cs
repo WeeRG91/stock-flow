@@ -1,4 +1,5 @@
 ﻿using StockFlow.Application.Abstractions;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Authorization;
@@ -17,6 +18,8 @@ namespace StockFlow.Application.Transfers.DispatchTransfer
         private readonly IProductRepository _products;
         private readonly ICurrentUser _currentUser;
         private readonly IClock _clock;
+        private readonly ITransferChangeNotifier _transferNotifier;
+        private readonly IInventoryChangeNotifier _inventoryNotifier;
 
         public DispatchTransferCommandHandler(
            ITransferRepository transfers,
@@ -24,7 +27,9 @@ namespace StockFlow.Application.Transfers.DispatchTransfer
            IWarehouseRepository warehouses,
            IProductRepository products,
            ICurrentUser currentUser,
-           IClock clock)
+           IClock clock,
+           ITransferChangeNotifier transferNotifier,
+           IInventoryChangeNotifier inventoryNotifier)
         {
             ArgumentNullException.ThrowIfNull(transfers);
             ArgumentNullException.ThrowIfNull(inventories);
@@ -32,6 +37,8 @@ namespace StockFlow.Application.Transfers.DispatchTransfer
             ArgumentNullException.ThrowIfNull(products);
             ArgumentNullException.ThrowIfNull(currentUser);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(transferNotifier);
+            ArgumentNullException.ThrowIfNull(inventoryNotifier);
 
             _transfers = transfers;
             _inventories = inventories;
@@ -39,6 +46,8 @@ namespace StockFlow.Application.Transfers.DispatchTransfer
             _products = products;
             _currentUser = currentUser;
             _clock = clock;
+            _transferNotifier = transferNotifier;
+            _inventoryNotifier = inventoryNotifier;
         }
 
         public async Task HandleAsync(
@@ -79,6 +88,14 @@ namespace StockFlow.Application.Transfers.DispatchTransfer
                 transfer,
                 sourceInventories,
                 cancellationToken);
+
+            await Task.WhenAll(
+                _transferNotifier.NotifyAsync(
+                    new TransferChanged(transfer.Id),
+                    cancellationToken),
+                _inventoryNotifier.NotifyAsync(
+                    new InventoryChanged(),
+                    cancellationToken));
         }
 
         private async Task<Guid> RequireDispatchingUserAsync(

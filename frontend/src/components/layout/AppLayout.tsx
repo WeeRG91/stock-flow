@@ -8,6 +8,7 @@ import { useLogout } from "@/features/auth/useLogout";
 import { ApiError } from "@/lib/ApiError";
 import { usePurchasingRealtime } from "@/features/purchasing-notification/usePurchasingRealtime";
 import { usePurchasingNotifications } from "@/features/purchasing-notification/usePurchasingNotifications";
+import { useTransferRealtime } from "@/features/transfers/useTransferRealtime";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -21,6 +22,9 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   const canReadPurchaseOrders = user.capabilities.includes(
     "PurchaseOrders.Read",
   );
+  const canReadTransfers = user.capabilities.includes("Transfers.Read");
+  const transferUserId = canReadTransfers ? user.id : "";
+  useTransferRealtime(transferUserId);
   const purchasingUserId = canReadPurchaseOrders ? user.id : "";
   usePurchasingRealtime(purchasingUserId);
   const inbox = usePurchasingNotifications(purchasingUserId);
@@ -87,6 +91,7 @@ export function AppLayout({ children, user }: AppLayoutProps) {
             <div className="p-4">
               <AppNavigation
                 canReadPurchaseOrders={canReadPurchaseOrders}
+                canReadTransfers={canReadTransfers}
                 unreadPurchasingCount={inbox.data?.unreadCount ?? 0}
               />
             </div>

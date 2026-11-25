@@ -3,6 +3,7 @@ using StockFlow.Application.Exceptions;
 using StockFlow.Application.Tests.Fakes;
 using StockFlow.Application.Transfers;
 using StockFlow.Application.Transfers.GetTransfers;
+using StockFlow.Application.Transfers.GetTransferReceipts;
 using StockFlow.Domain.Enums;
 
 namespace StockFlow.Application.Tests;
@@ -112,6 +113,14 @@ public sealed class GetTransfersQueryHandlerTests
 
     private sealed class RecordingReader : ITransferReadService
     {
+        public Task<IReadOnlyList<TransferReceiptHistoryItemDto>?> GetReceiptsAsync(
+            Guid transferId,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException(
+                "These tests must not request transfer receipt history.");
+        }
+
         public Task<TransferDetailsDto?> GetByIdAsync(
             Guid transferId,
             CancellationToken cancellationToken = default)

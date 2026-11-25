@@ -41,6 +41,9 @@ public sealed class UpdateDraftTransferCommandHandlerTests
         Assert.Same(fixture.Transfer, fixture.Transfers.LastSavedTransfer);
         Assert.Equal(cancellation.Token, fixture.Transfers.LookupToken);
         Assert.Equal(cancellation.Token, fixture.Transfers.SaveToken);
+        Assert.Equal(fixture.Transfer.Id,
+            Assert.Single(fixture.Notifier.Notifications).TransferId);
+        Assert.Equal(cancellation.Token, fixture.Notifier.LastToken);
     }
 
     [Fact]
@@ -53,6 +56,8 @@ public sealed class UpdateDraftTransferCommandHandlerTests
         Assert.Empty(fixture.Transfer.Lines);
         Assert.Equal(0, fixture.Products.GetByIdCallCount);
         Assert.Equal(1, fixture.Transfers.SaveCallCount);
+        Assert.Equal(fixture.Transfer.Id,
+            Assert.Single(fixture.Notifier.Notifications).TransferId);
     }
 
     [Theory]
@@ -89,6 +94,7 @@ public sealed class UpdateDraftTransferCommandHandlerTests
         Assert.Same(original, Assert.Single(fixture.Transfer.Lines));
         Assert.Equal(4, original.Quantity);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     [Fact]
@@ -103,6 +109,7 @@ public sealed class UpdateDraftTransferCommandHandlerTests
         Assert.Single(fixture.Transfer.Lines);
         Assert.Equal(0, fixture.Products.GetByIdCallCount);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     [Fact]
@@ -117,6 +124,7 @@ public sealed class UpdateDraftTransferCommandHandlerTests
         Assert.Equal(TransferStatus.Dispatched, fixture.Transfer.Status);
         Assert.Equal(4, Assert.Single(fixture.Transfer.Lines).InTransitQuantity);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     [Theory]
@@ -145,6 +153,27 @@ public sealed class UpdateDraftTransferCommandHandlerTests
 
         Assert.Equal(0, fixture.Transfers.LookupCallCount);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HandleAsync_WhenSaveFails_DoesNotNotifyOrRetry(bool conflict)
+    {
+        var fixture = new Fixture();
+        Exception failure = conflict
+            ? new TransferConflictException(fixture.Transfer.Id, "Simulated stale edit.")
+            : new InvalidOperationException("Simulated persistence failure.");
+        fixture.Transfers.SaveFailure = failure;
+
+        var error = await Record.ExceptionAsync(() =>
+            fixture.Handler.HandleAsync(fixture.Command()));
+
+        Assert.Same(failure, error);
+        Assert.Equal(1, fixture.Transfers.SaveCallCount);
+        Assert.Null(fixture.Transfers.LastSavedTransfer);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     private sealed class Fixture
@@ -157,6 +186,7 @@ public sealed class UpdateDraftTransferCommandHandlerTests
         public FakeCurrentUser User { get; } = new() { UserId = Guid.NewGuid() };
         public FakeTransferRepository Transfers { get; } = new();
         public FakeProductRepository Products { get; } = new();
+        public FakeTransferChangeNotifier Notifier { get; } = new();
         public Transfer Transfer { get; }
         public UpdateDraftTransferCommandHandler Handler { get; }
 
@@ -170,7 +200,13 @@ public sealed class UpdateDraftTransferCommandHandlerTests
 
             Transfer.AddLine(Guid.NewGuid(), "CHAIR", "Original chair", 4);
             Transfers.Loaded = (Transfer, _version);
-            Handler = new UpdateDraftTransferCommandHandler(Transfers, User, Products);
+            Notifier.OnNotify = notification =>
+            {
+                Assert.Equal(1, Transfers.SaveCallCount);
+                Assert.Same(Transfer, Transfers.LastSavedTransfer);
+                Assert.Equal(Transfer.Id, notification.TransferId);
+            };
+            Handler = new UpdateDraftTransferCommandHandler(Transfers, User, Products, Notifier);
         }
 
         public UpdateDraftTransferCommand Command(

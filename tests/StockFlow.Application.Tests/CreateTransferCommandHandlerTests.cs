@@ -24,6 +24,13 @@ public sealed class CreateTransferCommandHandlerTests
 
         using var cancellation = new CancellationTokenSource();
 
+        fixture.Notifier.OnNotify = notification =>
+        {
+            var saved = Assert.IsType<Transfer>(fixture.Transfers.LastSavedTransfer);
+            Assert.Equal(1, fixture.Transfers.SaveCallCount);
+            Assert.Equal(saved.Id, notification.TransferId);
+        };
+
         var result = await fixture.Handler.HandleAsync(command, cancellation.Token);
 
         var transfer = Assert.IsType<Transfer>(fixture.Transfers.LastSavedTransfer);
@@ -33,6 +40,8 @@ public sealed class CreateTransferCommandHandlerTests
         Assert.Equal(TransferStatus.Draft, result.Status);
         Assert.Equal(fixture.Clock.UtcNow, result.CreatedAt);
         Assert.Equal(fixture.User.UserId, result.CreatedByUserId);
+        Assert.Equal(transfer.Id, Assert.Single(fixture.Notifier.Notifications).TransferId);
+        Assert.Equal(cancellation.Token, fixture.Notifier.LastToken);
 
         Assert.Equal(fixture.Source.Id, transfer.SourceWarehouseId);
         Assert.Equal(fixture.Source.Code, transfer.SourceWarehouseCode);
@@ -86,6 +95,7 @@ public sealed class CreateTransferCommandHandlerTests
         Assert.Equal(0, fixture.Warehouses.GetByIdCallCount);
         Assert.Equal(0, fixture.Products.GetByIdCallCount);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     [Theory]
@@ -122,6 +132,7 @@ public sealed class CreateTransferCommandHandlerTests
         Assert.Equal(0, fixture.Warehouses.GetByIdCallCount);
         Assert.Equal(0, fixture.Products.GetByIdCallCount);
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     [Fact]
@@ -137,6 +148,7 @@ public sealed class CreateTransferCommandHandlerTests
         Assert.Same(failure, error);
         Assert.Equal(1, fixture.Transfers.SaveCallCount);
         Assert.Null(fixture.Transfers.LastSavedTransfer);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     [Theory]
@@ -194,6 +206,22 @@ public sealed class CreateTransferCommandHandlerTests
 
         Assert.Equal(0, fixture.Transfers.SaveCallCount);
         Assert.Null(fixture.Transfers.LastSavedTransfer);
+        Assert.Empty(fixture.Notifier.Notifications);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithCancelledToken_DoesNotSaveOrNotify()
+    {
+        var fixture = new Fixture();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            fixture.Handler.HandleAsync(fixture.Command(), cancellation.Token));
+
+        Assert.Equal(0, fixture.Warehouses.GetByIdCallCount);
+        Assert.Equal(0, fixture.Transfers.SaveCallCount);
+        Assert.Empty(fixture.Notifier.Notifications);
     }
 
     private sealed class Fixture
@@ -203,6 +231,7 @@ public sealed class CreateTransferCommandHandlerTests
         public FakeWarehouseRepository Warehouses { get; } = new();
         public FakeProductRepository Products { get; } = new();
         public FakeTransferRepository Transfers { get; } = new();
+        public FakeTransferChangeNotifier Notifier { get; } = new();
 
         public Warehouse Source { get; } = new("BRU", "Brussels", "Belgium");
         public Warehouse Destination { get; } = new("LIE", "Liège", "Belgium");
@@ -217,7 +246,7 @@ public sealed class CreateTransferCommandHandlerTests
             Products.Add(Product);
 
             Handler = new CreateTransferCommandHandler(
-                User, Warehouses, Products, Transfers, Clock);
+                User, Warehouses, Products, Transfers, Clock, Notifier);
         }
 
         public CreateTransferCommand Command()

@@ -39,6 +39,11 @@ public sealed class DispatchTransferCommandHandlerTests
             Assert.Single(fixture.Transfers.LastDispatchInventories));
         Assert.Equal(cancellation.Token, fixture.Transfers.LookupToken);
         Assert.Equal(cancellation.Token, fixture.Transfers.SaveToken);
+        Assert.Equal(fixture.Transfer.Id,
+            Assert.Single(fixture.TransferNotifier.Notifications).TransferId);
+        Assert.Single(fixture.InventoryNotifier.Notifications);
+        Assert.Equal(cancellation.Token, fixture.TransferNotifier.LastToken);
+        Assert.Equal(cancellation.Token, fixture.InventoryNotifier.LastCancellationToken);
         AssertNoSeparateSaves(fixture);
     }
 
@@ -163,6 +168,7 @@ public sealed class DispatchTransferCommandHandlerTests
         Assert.Equal(10, fixture.SourceInventory.QuantityOnHand);
         Assert.Empty(fixture.SourceInventory.PendingMovements);
         Assert.Equal(0, fixture.Transfers.DispatchSaveCallCount);
+        AssertNoNotifications(fixture);
         AssertNoSeparateSaves(fixture);
     }
 
@@ -204,7 +210,14 @@ public sealed class DispatchTransferCommandHandlerTests
         Assert.Single(fixture.SourceInventory.PendingMovements);
         // Mutated in-memory objects must be discarded after a failed save.
         Assert.Equal(TransferStatus.Dispatched, fixture.Transfer.Status);
+        AssertNoNotifications(fixture);
         AssertNoSeparateSaves(fixture);
+    }
+
+    private static void AssertNoNotifications(Fixture fixture)
+    {
+        Assert.Empty(fixture.TransferNotifier.Notifications);
+        Assert.Empty(fixture.InventoryNotifier.Notifications);
     }
 
     private static void AssertNoSeparateSaves(Fixture fixture)
@@ -224,6 +237,7 @@ public sealed class DispatchTransferCommandHandlerTests
         Assert.Equal(7, fixture.DestinationInventory.QuantityOnHand);
         Assert.Empty(fixture.DestinationInventory.PendingMovements);
         Assert.Equal(0, fixture.Transfers.DispatchSaveCallCount);
+        AssertNoNotifications(fixture);
         AssertNoSeparateSaves(fixture);
     }
 
@@ -234,6 +248,8 @@ public sealed class DispatchTransferCommandHandlerTests
         public FakeInventoryRepository Inventories { get; } = new();
         public FakeWarehouseRepository Warehouses { get; } = new();
         public FakeProductRepository Products { get; } = new();
+        public FakeTransferChangeNotifier TransferNotifier { get; } = new();
+        public FakeInventoryChangeNotifier InventoryNotifier { get; } = new();
         public FakeClock Clock { get; } = new()
         {
             UtcNow = new DateTimeOffset(2026, 11, 23, 11, 0, 0, TimeSpan.Zero)
@@ -269,8 +285,23 @@ public sealed class DispatchTransferCommandHandlerTests
             var version = Guid.NewGuid();
             Transfers.Loaded = (Transfer, version);
             Command = new DispatchTransferCommand(Transfer.Id, version);
+            TransferNotifier.OnNotify = notification =>
+            {
+                AssertDispatchSaved();
+                Assert.Equal(Transfer.Id, notification.TransferId);
+            };
+            InventoryNotifier.OnNotify = _ => AssertDispatchSaved();
             Handler = new DispatchTransferCommandHandler(
-                Transfers, Inventories, Warehouses, Products, User, Clock);
+                Transfers, Inventories, Warehouses, Products, User, Clock,
+                TransferNotifier, InventoryNotifier);
+        }
+
+        private void AssertDispatchSaved()
+        {
+            Assert.Equal(1, Transfers.DispatchSaveCallCount);
+            Assert.Same(Transfer, Transfers.LastSavedTransfer);
+            Assert.Same(SourceInventory, Assert.Single(Transfers.LastDispatchInventories));
+            Assert.Equal(TransferStatus.Dispatched, Transfer.Status);
         }
 
         public static InventoryEntity Stock(Guid productId, Guid warehouseId, int quantity)

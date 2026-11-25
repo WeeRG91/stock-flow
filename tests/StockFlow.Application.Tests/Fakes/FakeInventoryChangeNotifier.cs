@@ -11,12 +11,14 @@ namespace StockFlow.Application.Tests.Fakes
             _notifications.AsReadOnly();
 
         public CancellationToken LastCancellationToken { get; private set; }
+        public Action<InventoryChanged>? OnNotify { get; set; }
 
         public Task NotifyAsync(
             InventoryChanged notification,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(notification);
+            OnNotify?.Invoke(notification);
 
             LastCancellationToken = cancellationToken;
             _notifications.Add(notification);

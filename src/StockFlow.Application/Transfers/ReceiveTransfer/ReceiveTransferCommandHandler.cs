@@ -1,4 +1,5 @@
 ﻿using StockFlow.Application.Abstractions;
+using StockFlow.Application.Abstractions.Notifications;
 using StockFlow.Application.Abstractions.Persistence;
 using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Authorization;
@@ -16,25 +17,33 @@ namespace StockFlow.Application.Transfers.ReceiveTransfer
         private readonly ITransferRepository _transfers;
         private readonly IInventoryRepository _inventories;
         private readonly IClock _clock;
+        private readonly ITransferChangeNotifier _transferNotifier;
+        private readonly IInventoryChangeNotifier _inventoryNotifier;
 
         public ReceiveTransferCommandHandler(
             ICurrentUser currentUser,
             ITransferReceiptRepository receipts,
             ITransferRepository transfers,
             IInventoryRepository inventories,
-            IClock clock)
+            IClock clock,
+            ITransferChangeNotifier transferNotifier,
+            IInventoryChangeNotifier inventoryNotifier)
         {
             ArgumentNullException.ThrowIfNull(currentUser);
             ArgumentNullException.ThrowIfNull(receipts);
             ArgumentNullException.ThrowIfNull(transfers);
             ArgumentNullException.ThrowIfNull(inventories);
             ArgumentNullException.ThrowIfNull(clock);
+            ArgumentNullException.ThrowIfNull(transferNotifier);
+            ArgumentNullException.ThrowIfNull(inventoryNotifier);
 
             _currentUser = currentUser;
             _receipts = receipts;
             _transfers = transfers;
             _inventories = inventories;
             _clock = clock;
+            _transferNotifier = transferNotifier;
+            _inventoryNotifier = inventoryNotifier;
         }
 
         public async Task<ReceiveTransferResult> HandleAsync(
@@ -91,6 +100,14 @@ namespace StockFlow.Application.Transfers.ReceiveTransfer
                 transfer,
                 destinationInventories,
                 cancellationToken);
+
+            await Task.WhenAll(
+                _transferNotifier.NotifyAsync(
+                    new TransferChanged(transfer.Id),
+                    cancellationToken),
+                _inventoryNotifier.NotifyAsync(
+                    new InventoryChanged(),
+                    cancellationToken));
 
             return ToResult(receipt);
         }
