@@ -7,6 +7,67 @@ namespace StockFlow.API.Tests
 {
     public class InventoryReadEndpointTests
     {
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public async Task GetInventory_ForwardsOptionalFilters(
+            bool filterProduct, bool filterWarehouse)
+        {
+            using var factory = new StockFlowApiFactory();
+            Guid? productId = filterProduct ? Guid.NewGuid() : null;
+            Guid? warehouseId = filterWarehouse ? Guid.NewGuid() : null;
+            var url = "/api/inventory?pageNumber=2&pageSize=10";
+            if (productId.HasValue)
+            {
+                url += $"&productId={productId.Value}";
+            }
+            if (warehouseId.HasValue)
+            {
+                url += $"&warehouseId={warehouseId.Value}";
+            }
+
+            using var client = factory.CreateClient();
+            using var response = await client.GetAsync(url);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(productId, factory.InventoryReader.ReceivedProductId);
+            Assert.Equal(warehouseId, factory.InventoryReader.ReceivedWarehouseId);
+            Assert.Equal(2, factory.InventoryReader.ReceivedPageNumber);
+            Assert.Equal(10, factory.InventoryReader.ReceivedPageSize);
+            Assert.Equal(1, factory.InventoryReader.CallCount);
+            Assert.Equal(0, factory.Inventories.SaveCallCount);
+
+            var result = await response.Content.ReadFromJsonAsync<GetInventoryResult>();
+            Assert.NotNull(result);
+            Assert.Empty(result.Items);
+            Assert.Equal(0, result.TotalCount);
+        }
+
+        [Theory]
+        [InlineData("productId=00000000-0000-0000-0000-000000000000", "ProductId")]
+        [InlineData("warehouseId=00000000-0000-0000-0000-000000000000", "WarehouseId")]
+        [InlineData("ProductId=not-a-guid", "ProductId")]
+        [InlineData("WarehouseId=not-a-guid", "WarehouseId")]
+        public async Task GetInventory_WithInvalidFilter_ReturnsValidationProblem(
+            string queryString, string expectedField)
+        {
+            using var factory = new StockFlowApiFactory();
+            using var client = factory.CreateClient();
+            using var response = await client.GetAsync($"/api/inventory?{queryString}");
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal("application/problem+json",
+                response.Content.Headers.ContentType?.MediaType);
+            var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(400, problem.GetProperty("status").GetInt32());
+            Assert.True(problem.GetProperty("errors").TryGetProperty(expectedField, out var errors));
+            Assert.NotEmpty(errors.EnumerateArray());
+            Assert.Equal(0, factory.InventoryReader.CallCount);
+            Assert.Equal(0, factory.Inventories.SaveCallCount);
+        }
+
         [Fact]
         public async Task GetInventory_ReturnsPageAndForwardsPagination()
         {

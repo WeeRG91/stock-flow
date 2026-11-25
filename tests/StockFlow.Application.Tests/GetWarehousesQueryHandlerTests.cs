@@ -74,6 +74,14 @@ namespace StockFlow.Application.Tests
 
         private sealed class FakeWarehouseReadService : IWarehouseReadService
         {
+            public Task<WarehouseDto?> GetByIdAsync(
+                Guid warehouseId,
+                CancellationToken cancellationToken = default)
+            {
+                throw new NotSupportedException(
+                    "Warehouse detail lookup is not used by these list-query tests.");
+            }
+
             public IReadOnlyList<WarehouseDto> Warehouses { get; set; } =
                 Array.Empty<WarehouseDto>();
 

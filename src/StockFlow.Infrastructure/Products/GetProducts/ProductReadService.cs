@@ -27,5 +27,21 @@ namespace StockFlow.Infrastructure.Products.GetProducts
                     product.IsActive))
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<ProductDto?> GetByIdAsync(
+            Guid productId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Products
+                .AsNoTracking()
+                .Where(product => product.Id == productId)
+                .Select(product => new ProductDto(
+                    product.Id,
+                    product.Name,
+                    product.Sku,
+                    product.Description,
+                    product.IsActive))
+                .SingleOrDefaultAsync(cancellationToken);
+                }
     }
 }

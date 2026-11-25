@@ -5,6 +5,8 @@
         Task<GetInventoryResult> GetInventoryAsync(
             int pageNumber,
             int pageSize,
+            Guid? productId,
+            Guid? warehouseId,
             CancellationToken cancellationToken = default);
     }
 }

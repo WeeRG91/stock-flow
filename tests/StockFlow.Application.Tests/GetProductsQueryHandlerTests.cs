@@ -77,6 +77,14 @@ namespace StockFlow.Application.Tests
 
         private sealed class FakeProductReadService : IProductReadService
         {
+            public Task<ProductDto?> GetByIdAsync(
+                Guid productId,
+                CancellationToken cancellationToken = default)
+            {
+                throw new NotSupportedException(
+                    "Product detail lookup is not used by these list-query tests.");
+            }
+
             public IReadOnlyList<ProductDto> Products { get; set; } =
                 Array.Empty<ProductDto>();
 

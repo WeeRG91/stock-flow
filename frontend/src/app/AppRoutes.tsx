@@ -13,6 +13,8 @@ import { PurchaseOrderDetailsPage } from "@/features/purchase-orders/PurchaseOrd
 import { PurchasingNotificationsPage } from "@/features/purchasing-notification/PurchasingNotificationsPage";
 import { TransfersPage } from "@/features/transfers/TransfersPage";
 import { TransferDetailsPage } from "@/features/transfers/TransferDetailsPage";
+import { ProductDetailsPage } from "@/features/products/ProductDetailsPage";
+import { WarehouseDetailsPage } from "@/features/warehouses/WarehouseDetailsPage";
 
 export function AppRoutes() {
   return (
@@ -23,7 +25,9 @@ export function AppRoutes() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route path="/products/:id" element={<ProductDetailsPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />
+        <Route path="/warehouses/:id" element={<WarehouseDetailsPage />} />
         <Route path="/suppliers" element={<SuppliersPage />} />
         <Route path="/suppliers/:id" element={<SupplierDetailsPage />} />
         <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />

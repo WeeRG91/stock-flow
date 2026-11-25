@@ -6,6 +6,53 @@ namespace StockFlow.Application.Tests
     public class GetInventoryQueryHandlerTests
     {
         [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public async Task HandleAsync_ForwardsOptionalFilters(
+            bool filterProduct, bool filterWarehouse)
+        {
+            Guid? productId = filterProduct ? Guid.NewGuid() : null;
+            Guid? warehouseId = filterWarehouse ? Guid.NewGuid() : null;
+            var reader = new FakeInventoryReadService();
+            var handler = new GetInventoryQueryHandler(reader);
+            using var cancellation = new CancellationTokenSource();
+
+            await handler.HandleAsync(
+                new GetInventoryQuery(2, 10, productId, warehouseId),
+                cancellation.Token);
+
+            Assert.Equal(productId, reader.ReceivedProductId);
+            Assert.Equal(warehouseId, reader.ReceivedWarehouseId);
+            Assert.Equal(2, reader.ReceivedPageNumber);
+            Assert.Equal(10, reader.ReceivedPageSize);
+            Assert.Equal(cancellation.Token, reader.ReceivedToken);
+            Assert.Equal(1, reader.CallCount);
+        }
+
+        [Theory]
+        [InlineData(true, "ProductId")]
+        [InlineData(false, "WarehouseId")]
+        public void HandleAsync_WithEmptyFilter_RejectsBeforeReading(
+            bool emptyProduct, string expectedField)
+        {
+            var reader = new FakeInventoryReadService();
+            var handler = new GetInventoryQueryHandler(reader);
+            var query = emptyProduct
+                ? new GetInventoryQuery(ProductId: Guid.Empty)
+                : new GetInventoryQuery(WarehouseId: Guid.Empty);
+
+            var exception = Assert.Throws<RequestValidationException>(() =>
+            {
+                _ = handler.HandleAsync(query);
+            });
+
+            Assert.Equal(expectedField, exception.FieldName);
+            Assert.Equal(0, reader.CallCount);
+        }
+
+        [Theory]
         [InlineData(1, 20)]
         [InlineData(2, 100)]
         public async Task HandleAsync_WithValidPagination_ForwardsParameters(
@@ -94,16 +141,22 @@ namespace StockFlow.Application.Tests
             public int CallCount { get; private set; }
             public int ReceivedPageNumber { get; private set; }
             public int ReceivedPageSize { get; private set; }
+            public Guid? ReceivedProductId { get; private set; }
+            public Guid? ReceivedWarehouseId { get; private set; }
             public CancellationToken ReceivedToken { get; private set; }
 
             public Task<GetInventoryResult> GetInventoryAsync(
                 int pageNumber,
                 int pageSize,
+                Guid? productId,
+                Guid? warehouseId,
                 CancellationToken cancellationToken = default)
             {
                 CallCount++;
                 ReceivedPageNumber = pageNumber;
                 ReceivedPageSize = pageSize;
+                ReceivedProductId = productId;
+                ReceivedWarehouseId = warehouseId;
                 ReceivedToken = cancellationToken;
 
                 return Task.FromResult(new GetInventoryResult(

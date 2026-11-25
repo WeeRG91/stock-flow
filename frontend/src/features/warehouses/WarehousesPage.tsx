@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/ApiError";
 import { useWarehouses } from "./useWarehouses";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
+import { Link } from "react-router";
 
 export function WarehousesPage() {
   const query = useWarehouses();
@@ -83,7 +84,12 @@ export function WarehousesPage() {
                       </td>
 
                       <td className="px-6 py-4 font-medium">
-                        {warehouse.name}
+                        <Link
+                          to={`/warehouses/${warehouse.id}`}
+                          className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                        >
+                          {warehouse.name}
+                        </Link>
                       </td>
 
                       <td className="px-6 py-4 text-muted-foreground">

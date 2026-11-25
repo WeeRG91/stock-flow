@@ -13,10 +13,14 @@ namespace StockFlow.API.Tests.Fakes
         public int CallCount { get; private set; }
         public int ReceivedPageNumber { get; private set; }
         public int ReceivedPageSize { get; private set; }
+        public Guid? ReceivedProductId { get; private set; }
+        public Guid? ReceivedWarehouseId { get; private set; }
 
         public Task<GetInventoryResult> GetInventoryAsync(
             int pageNumber,
             int pageSize,
+            Guid? productId,
+            Guid? warehouseId,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -24,6 +28,8 @@ namespace StockFlow.API.Tests.Fakes
             CallCount++;
             ReceivedPageNumber = pageNumber;
             ReceivedPageSize = pageSize;
+            ReceivedProductId = productId;
+            ReceivedWarehouseId = warehouseId;
 
             if (ReadException is not null)
             {

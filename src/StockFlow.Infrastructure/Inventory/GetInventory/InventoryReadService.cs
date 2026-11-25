@@ -14,7 +14,12 @@ namespace StockFlow.Infrastructure.Inventory.GetInventory
             _context = context;
         }
 
-        public async Task<GetInventoryResult> GetInventoryAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+        public async Task<GetInventoryResult> GetInventoryAsync(
+            int pageNumber,
+            int pageSize,
+            Guid? productId,
+            Guid? warehouseId,
+            CancellationToken cancellationToken = default)
         {
             var offset = checked(
                 (int)(((long)pageNumber - 1) * pageSize));
@@ -36,6 +41,18 @@ namespace StockFlow.Infrastructure.Inventory.GetInventory
                     WarehouseCode = warehouse.Code,
                     inventory.QuantityOnHand
                 };
+
+            if (productId.HasValue)
+            {
+                balances = balances.Where(
+                    balance => balance.ProductId == productId.Value);
+            }
+
+            if (warehouseId.HasValue)
+            {
+                balances = balances.Where(
+                    balance => balance.WarehouseId == warehouseId.Value);
+            }
 
             var totalCount = await balances.CountAsync(cancellationToken);
 

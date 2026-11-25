@@ -42,9 +42,25 @@ namespace StockFlow.Application.Inventory.GetInventory
                     "The requested page is beyond the supported range.");
             }
 
+            if (query.ProductId == Guid.Empty)
+            {
+                throw new RequestValidationException(
+                    nameof(query.ProductId),
+                    "Product ID must not be empty.");
+            }
+
+            if (query.WarehouseId == Guid.Empty)
+            {
+                throw new RequestValidationException(
+                    nameof(query.WarehouseId),
+                    "Warehouse ID must not be empty.");
+            }
+
             return _inventory.GetInventoryAsync(
                 query.PageNumber,
                 query.PageSize,
+                query.ProductId,
+                query.WarehouseId,
                 cancellationToken);
         }
     }

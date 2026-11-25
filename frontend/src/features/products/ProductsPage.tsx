@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/ApiError";
 import { useProducts } from "./useProducts";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
+import { Link } from "react-router";
 
 export function ProductsPage() {
   const query = useProducts();
@@ -78,7 +79,14 @@ export function ProductsPage() {
                         {product.sku}
                       </td>
 
-                      <td className="px-6 py-4 font-medium">{product.name}</td>
+                      <td className="px-6 py-4 font-medium">
+                        <Link
+                          to={`/products/${product.id}`}
+                          className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                        >
+                          {product.name}
+                        </Link>
+                      </td>
 
                       <td className="max-w-80 px-6 py-4 leading-6 text-muted-foreground wrap-break-word">
                         {product.description ?? "No description"}

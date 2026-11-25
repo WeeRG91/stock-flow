@@ -43,7 +43,9 @@ namespace StockFlow.API.Controllers
             var result = await _queryHandler.HandleAsync(
                 new GetInventoryQuery(
                     request.PageNumber,
-                    request.PageSize),
+                    request.PageSize,
+                    request.ProductId,
+                    request.WarehouseId),
                 cancellationToken);
 
             return Ok(result);

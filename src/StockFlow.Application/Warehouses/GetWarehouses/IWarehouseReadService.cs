@@ -4,5 +4,9 @@
     {
         Task<IReadOnlyList<WarehouseDto>> GetWarehousesAsync(
             CancellationToken cancellationToken = default);
+
+        Task<WarehouseDto?> GetByIdAsync(
+            Guid warehouseId,
+            CancellationToken cancellationToken = default);
     }
 }

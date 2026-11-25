@@ -28,5 +28,21 @@ namespace StockFlow.Infrastructure.Warehouses.GetWarehouses
                     warehouse.IsActive))
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<WarehouseDto?> GetByIdAsync(
+            Guid warehouseId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.Warehouses
+                .AsNoTracking()
+                .Where(warehouse => warehouse.Id == warehouseId)
+                .Select(warehouse => new WarehouseDto(
+                    warehouse.Id,
+                    warehouse.Code,
+                    warehouse.Name,
+                    warehouse.Location,
+                    warehouse.IsActive))
+                .SingleOrDefaultAsync(cancellationToken);
+        }
     }
 }
