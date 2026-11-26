@@ -24,8 +24,7 @@ export function StockReservationActions({
   const fulfillMutation = useFulfillStockReservation();
   const submitting = useRef(false);
 
-  const pending =
-    releaseMutation.isPending || fulfillMutation.isPending;
+  const pending = releaseMutation.isPending || fulfillMutation.isPending;
 
   const error = releaseMutation.error ?? fulfillMutation.error;
 
@@ -70,10 +69,20 @@ export function StockReservationActions({
     }
   }
 
+  if (
+    reservation.status !== 1 &&
+    !pending &&
+    !error &&
+    !releaseMutation.isSuccess &&
+    !fulfillMutation.isSuccess
+  ) {
+    return null;
+  }
+
   return (
-    <div className="space-y-3 border-t pt-6">
+    <div className="space-y-3">
       {reservation.status === 1 && (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 border-t pt-6">
           {canRelease && (
             <Button
               type="button"
@@ -82,9 +91,7 @@ export function StockReservationActions({
               disabled={pending || refreshing}
               onClick={() => void execute("release")}
             >
-              {releaseMutation.isPending
-                ? "Releasing…"
-                : "Release reservation"}
+              {releaseMutation.isPending ? "Releasing…" : "Release reservation"}
             </Button>
           )}
 
