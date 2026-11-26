@@ -17,7 +17,9 @@ type Capability =
   | "Transfers.Read"
   | "Transfers.Manage"
   | "Transfers.Dispatch"
-  | "Transfers.Receive";
+  | "Transfers.Receive"
+  | "StockReservations.Manage"
+  | "StockReservations.Fulfill";
 
 export function usePermissions() {
   const { user } = useOutletContext<AuthenticatedOutletContext>();

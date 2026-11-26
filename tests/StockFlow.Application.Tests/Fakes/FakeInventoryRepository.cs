@@ -13,6 +13,18 @@ namespace StockFlow.Application.Tests.Fakes
         public InventoryEntity? LastSavedInventory { get; private set; }
         public Exception? SaveException { get; set; }
 
+        public Task<InventoryEntity?> GetByIdAsync(
+            Guid inventoryId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            GetCallCount++;
+
+            return Task.FromResult(
+                _inventories.Values.SingleOrDefault(
+                    inventory => inventory.Id == inventoryId));
+        }
+
         public void Add(InventoryEntity inventory)
         {
             _inventories.Add(

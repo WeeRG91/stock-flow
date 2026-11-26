@@ -18,6 +18,7 @@ namespace StockFlow.Infrastructure.Persistence
         public DbSet<OverduePurchaseOrderAlert> OverduePurchaseOrderAlerts => Set<OverduePurchaseOrderAlert>();
         public DbSet<Transfer> Transfers => Set<Transfer>();
         public DbSet<TransferReceipt> TransferReceipts => Set<TransferReceipt>();
+        public DbSet<StockReservation> StockReservations => Set<StockReservation>();
 
         public StockFlowDbContext(
             DbContextOptions<StockFlowDbContext> options)

@@ -123,6 +123,24 @@ namespace StockFlow.API.Authorization
                     policy => policy
                         .RequireAuthenticatedUser()
                         .RequireRole(readRoles));
+
+                options.AddPolicy(
+                    StockFlowPolicies.StockReservationsManage,
+                    policy => policy
+                        .RequireAuthenticatedUser()
+                        .RequireRole(
+                            StockFlowRoles.Administrator,
+                            StockFlowRoles.InventoryManager,
+                            StockFlowRoles.WarehouseStaff));
+
+                options.AddPolicy(
+                    StockFlowPolicies.StockReservationsFulfill,
+                    policy => policy
+                    .RequireAuthenticatedUser()
+                    .RequireRole(
+                        StockFlowRoles.Administrator,
+                        StockFlowRoles.InventoryManager,
+                        StockFlowRoles.WarehouseStaff));
             });
 
             return services;

@@ -23,15 +23,22 @@ const navigationItems = [
     icon: Bell,
   },
   { to: "/transfers", label: "Warehouse transfers", icon: ArrowLeftRight },
+  {
+    to: "/stock-reservations",
+    label: "Stock reservations",
+    icon: ClipboardList,
+  },
 ];
 
 export function AppNavigation({
   canReadPurchaseOrders,
   canReadTransfers,
+  canReadStockReservations,
   unreadPurchasingCount,
 }: {
   canReadPurchaseOrders: boolean;
   canReadTransfers: boolean;
+  canReadStockReservations: boolean;
   unreadPurchasingCount: number;
 }) {
   const visibleItems = navigationItems.filter(({ to }) => {
@@ -41,6 +48,10 @@ export function AppNavigation({
 
     if (to === "/transfers") {
       return canReadTransfers;
+    }
+
+    if (to === "/stock-reservations") {
+      return canReadStockReservations;
     }
 
     return true;

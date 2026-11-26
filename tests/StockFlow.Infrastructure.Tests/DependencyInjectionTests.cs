@@ -3,6 +3,8 @@ using StockFlow.Application.Abstractions.Persistence;
 using Microsoft.AspNetCore.Identity;
 using StockFlow.Infrastructure.Persistence;
 using StockFlow.Infrastructure.Persistence.Repositories;
+using StockFlow.Application.StockReservations;
+using StockFlow.Infrastructure.StockReservations;
 
 namespace StockFlow.Infrastructure.Tests
 {
@@ -45,10 +47,26 @@ namespace StockFlow.Infrastructure.Tests
             var warehouses = firstScope.ServiceProvider
                 .GetRequiredService<IWarehouseRepository>();
 
+            var reservations = firstScope.ServiceProvider
+                .GetRequiredService<IStockReservationRepository>();
+
             // Assert
             Assert.IsType<InventoryRepository>(inventories);
             Assert.IsType<ProductRepository>(products);
             Assert.IsType<WarehouseRepository>(warehouses);
+            Assert.IsType<StockReservationRepository>(reservations);
+            var reservationReader = firstScope.ServiceProvider.GetRequiredService<IStockReservationReadService>();
+            Assert.IsType<StockReservationReadService>(reservationReader);
+            Assert.Same(reservationReader,
+                firstScope.ServiceProvider.GetRequiredService<IStockReservationReadService>());
+            Assert.NotSame(reservationReader,
+                secondScope.ServiceProvider.GetRequiredService<IStockReservationReadService>());
+            Assert.Same(
+                reservations,
+                firstScope.ServiceProvider.GetRequiredService<IStockReservationRepository>());
+            Assert.NotSame(
+                reservations,
+                secondScope.ServiceProvider.GetRequiredService<IStockReservationRepository>());
 
             Assert.Same(
                 firstContext,

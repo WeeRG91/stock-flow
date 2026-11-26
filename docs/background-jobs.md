@@ -26,7 +26,9 @@ The API must be running to schedule and process work.
 
 Only existing inventories with configured thresholds and active products
 and warehouses are monitored. A null threshold disables monitoring.
-Stock is low when quantity is strictly below its threshold.
+Stock is low when QuantityOnHand is strictly below its threshold.
+Reservations do not change this monitoring rule; QuantityAvailable is
+used to determine stock available for allocation and ordinary removal.
 
 LowStockAlerts stores one reusable alert per inventory.
 Repeated low-stock detection preserves an active alert.

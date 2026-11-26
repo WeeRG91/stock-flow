@@ -15,6 +15,8 @@ import { TransfersPage } from "@/features/transfers/TransfersPage";
 import { TransferDetailsPage } from "@/features/transfers/TransferDetailsPage";
 import { ProductDetailsPage } from "@/features/products/ProductDetailsPage";
 import { WarehouseDetailsPage } from "@/features/warehouses/WarehouseDetailsPage";
+import { StockReservationsPage } from "@/features/stock-reservations/StockReservationsPage";
+import { StockReservationDetailsPage } from "@/features/stock-reservations/StockReservationDetailsPage";
 
 export function AppRoutes() {
   return (
@@ -41,6 +43,11 @@ export function AppRoutes() {
         />
         <Route path="/transfers" element={<TransfersPage />} />
         <Route path="/transfers/:id" element={<TransferDetailsPage />} />
+        <Route path="/stock-reservations" element={<StockReservationsPage />} />
+        <Route
+          path="/stock-reservations/:id"
+          element={<StockReservationDetailsPage />}
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

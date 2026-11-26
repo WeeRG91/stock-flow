@@ -23,6 +23,8 @@ export interface InventoryBalanceDto {
   warehouseName: string;
   warehouseCode: string;
   quantityOnHand: number;
+  quantityReserved: number;
+  quantityAvailable: number;
 }
 
 export interface GetInventoryResult {
@@ -353,4 +355,55 @@ export interface TransferReceiptHistoryItemDto {
   confirmedAt: string;
   confirmedByUserId: string;
   lines: TransferReceiptHistoryLineDto[];
+}
+
+export type StockReservationStatus = 1 | 2 | 3;
+
+export interface StockReservationDto {
+  reservationId: string;
+  inventoryId: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  warehouseId: string;
+  warehouseName: string;
+  warehouseCode: string;
+  quantity: number;
+  reference: string;
+  status: StockReservationStatus;
+  createdAt: string;
+  createdByUserId: string;
+  releasedAt: string | null;
+  releasedByUserId: string | null;
+  fulfilledAt: string | null;
+  fulfilledByUserId: string | null;
+  version: string;
+}
+
+export interface GetStockReservationsResult {
+  items: StockReservationDto[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+export interface CreateStockReservationRequest {
+  requestId: string;
+  inventoryId: string;
+  quantity: number;
+  reference: string;
+}
+
+export interface CreateStockReservationResult {
+  reservationId: string;
+  inventoryId: string;
+  quantity: number;
+  reference: string;
+  status: StockReservationStatus;
+  createdAt: string;
+  createdByUserId: string;
+}
+
+export interface StockReservationVersionRequest {
+  expectedVersion: string;
 }

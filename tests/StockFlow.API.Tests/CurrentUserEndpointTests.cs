@@ -37,6 +37,8 @@ public class CurrentUserEndpointTests
                 .Append(StockFlowPolicies.TransfersManage)
                 .Append(StockFlowPolicies.TransfersDispatch)
                 .Append(StockFlowPolicies.TransfersReceive)
+                .Append(StockFlowPolicies.StockReservationsManage)
+                .Append(StockFlowPolicies.StockReservationsFulfill)
                 .ToArray()
         ];
 
@@ -48,6 +50,8 @@ public class CurrentUserEndpointTests
                 .Append(StockFlowPolicies.TransfersManage)
                 .Append(StockFlowPolicies.TransfersDispatch)
                 .Append(StockFlowPolicies.TransfersReceive)
+                .Append(StockFlowPolicies.StockReservationsManage)
+                .Append(StockFlowPolicies.StockReservationsFulfill)
                 .ToArray()
         ];
 
@@ -59,6 +63,8 @@ public class CurrentUserEndpointTests
                 .Append(StockFlowPolicies.TransfersManage)
                 .Append(StockFlowPolicies.TransfersDispatch)
                 .Append(StockFlowPolicies.TransfersReceive)
+                .Append(StockFlowPolicies.StockReservationsManage)
+                .Append(StockFlowPolicies.StockReservationsFulfill)
                 .ToArray()
         ];
 
@@ -166,7 +172,9 @@ public class CurrentUserEndpointTests
                 .Append(StockFlowPolicies.PurchaseOrdersManage)
                 .Append(StockFlowPolicies.TransfersManage)
                 .Append(StockFlowPolicies.TransfersDispatch)
-                .Append(StockFlowPolicies.TransfersReceive),
+                .Append(StockFlowPolicies.TransfersReceive)
+                .Append(StockFlowPolicies.StockReservationsManage)
+                .Append(StockFlowPolicies.StockReservationsFulfill),
             body.Capabilities);
     }
 

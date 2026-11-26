@@ -68,8 +68,11 @@ namespace StockFlow.API.Tests
             Assert.Equal(0, factory.Inventories.SaveCallCount);
         }
 
-        [Fact]
-        public async Task GetInventory_ReturnsPageAndForwardsPagination()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(5)]
+        [InlineData(12)]
+        public async Task GetInventory_ReturnsBalancesAndForwardsPagination(int reserved)
         {
             using var factory = new StockFlowApiFactory();
 
@@ -81,7 +84,8 @@ namespace StockFlow.API.Tests
                 factory.Warehouse.Id,
                 factory.Warehouse.Name,
                 factory.Warehouse.Code,
-                12);
+                12,
+                reserved);
 
             factory.InventoryReader.Items = new[] { item };
             factory.InventoryReader.TotalCount = 3;
@@ -92,11 +96,16 @@ namespace StockFlow.API.Tests
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            var result = await response.Content
-                .ReadFromJsonAsync<GetInventoryResult>();
+            var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+            var result = json.Deserialize<GetInventoryResult>(
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
             Assert.NotNull(result);
             Assert.Equal(item, Assert.Single(result.Items));
+            var balance = json.GetProperty("items")[0];
+            Assert.Equal(12, balance.GetProperty("quantityOnHand").GetInt32());
+            Assert.Equal(reserved, balance.GetProperty("quantityReserved").GetInt32());
+            Assert.Equal(12 - reserved, balance.GetProperty("quantityAvailable").GetInt32());
             Assert.Equal(2, result.PageNumber);
             Assert.Equal(1, result.PageSize);
             Assert.Equal(3, result.TotalCount);

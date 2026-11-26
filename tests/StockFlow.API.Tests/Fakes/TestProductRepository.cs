@@ -36,6 +36,19 @@ namespace StockFlow.API.Tests.Fakes
 
     public sealed class TestInventoryRepository : IInventoryRepository
     {
+        public Task<InventoryEntity?> GetByIdAsync(
+            Guid inventoryId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            GetCallCount++;
+
+            var inventory = Inventory;
+
+            return Task.FromResult<InventoryEntity?>(
+                inventory?.Id == inventoryId ? inventory : null);
+        }
+
         public InventoryEntity? Inventory { get; set; }
         public InventoryEntity? LastSavedInventory { get; private set; }
         public Exception? SaveException { get; set; }

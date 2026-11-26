@@ -8,5 +8,10 @@
         Guid WarehouseId,
         string WarehouseName,
         string WarehouseCode,
-        int QuantityOnHand);
+        int QuantityOnHand,
+        int QuantityReserved)
+    {
+        public int QuantityAvailable =>
+            QuantityOnHand - QuantityReserved;
+    }
 }

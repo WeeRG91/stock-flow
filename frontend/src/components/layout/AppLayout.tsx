@@ -23,6 +23,7 @@ export function AppLayout({ children, user }: AppLayoutProps) {
     "PurchaseOrders.Read",
   );
   const canReadTransfers = user.capabilities.includes("Transfers.Read");
+  const canReadStockReservations = user.capabilities.includes("Inventory.Read");
   const transferUserId = canReadTransfers ? user.id : "";
   useTransferRealtime(transferUserId);
   const purchasingUserId = canReadPurchaseOrders ? user.id : "";
@@ -92,6 +93,7 @@ export function AppLayout({ children, user }: AppLayoutProps) {
               <AppNavigation
                 canReadPurchaseOrders={canReadPurchaseOrders}
                 canReadTransfers={canReadTransfers}
+                canReadStockReservations={canReadStockReservations}
                 unreadPurchasingCount={inbox.data?.unreadCount ?? 0}
               />
             </div>

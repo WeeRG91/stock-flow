@@ -39,7 +39,8 @@ namespace StockFlow.Infrastructure.Inventory.GetInventory
                     WarehouseId = warehouse.Id,
                     WarehouseName = warehouse.Name,
                     WarehouseCode = warehouse.Code,
-                    inventory.QuantityOnHand
+                    inventory.QuantityOnHand,
+                    inventory.QuantityReserved
                 };
 
             if (productId.HasValue)
@@ -70,7 +71,8 @@ namespace StockFlow.Infrastructure.Inventory.GetInventory
                     balance.WarehouseId,
                     balance.WarehouseName,
                     balance.WarehouseCode,
-                    balance.QuantityOnHand))
+                    balance.QuantityOnHand,
+                    balance.QuantityReserved))
                 .ToListAsync(cancellationToken);
 
             return new GetInventoryResult(

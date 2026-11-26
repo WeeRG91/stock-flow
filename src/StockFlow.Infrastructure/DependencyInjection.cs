@@ -13,6 +13,7 @@ using StockFlow.Application.Products.GetProducts;
 using StockFlow.Application.PurchaseOrders;
 using StockFlow.Application.PurchaseOrders.MonitorOverduePurchaseOrders;
 using StockFlow.Application.PurchasingNotifications;
+using StockFlow.Application.StockReservations;
 using StockFlow.Application.Suppliers;
 using StockFlow.Application.Transfers;
 using StockFlow.Application.Warehouses.GetWarehouses;
@@ -23,6 +24,7 @@ using StockFlow.Infrastructure.Persistence;
 using StockFlow.Infrastructure.Persistence.Repositories;
 using StockFlow.Infrastructure.Products.GetProducts;
 using StockFlow.Infrastructure.Purchasing;
+using StockFlow.Infrastructure.StockReservations;
 using StockFlow.Infrastructure.Suppliers;
 using StockFlow.Infrastructure.Time;
 using StockFlow.Infrastructure.Transfers;
@@ -97,6 +99,8 @@ namespace StockFlow.Infrastructure
             services.AddScoped<ITransferRepository, TransferRepository>();
             services.AddScoped<ITransferReceiptRepository, TransferReceiptRepository>();
             services.AddScoped<ITransferReadService, TransferReadService>();
+            services.AddScoped<IStockReservationRepository, StockReservationRepository>();
+            services.AddScoped<IStockReservationReadService, StockReservationReadService>();
 
             return services;
         }

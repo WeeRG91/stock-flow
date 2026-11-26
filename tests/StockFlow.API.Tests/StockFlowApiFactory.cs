@@ -12,6 +12,7 @@ using StockFlow.Application.Abstractions.Time;
 using StockFlow.Application.Inventory.GetInventory;
 using StockFlow.Application.Products.GetProducts;
 using StockFlow.Application.Suppliers;
+using StockFlow.Application.StockReservations;
 using StockFlow.Application.Warehouses.GetWarehouses;
 using StockFlow.Domain.Entities;
 
@@ -29,6 +30,8 @@ namespace StockFlow.API.Tests
         public TestWarehouseRepository Warehouses { get; } = new();
         public TestInventoryRepository Inventories { get; } = new();
         public TestSupplierRepository Suppliers { get; } = new();
+        public TestStockReservationRepository Reservations { get; } = new();
+        public TestStockReservationReadService ReservationReader { get; } = new();
         public TestProductReadService ProductReader { get; } = new();
         public TestWarehouseReadService WarehouseReader { get; } = new();
         public TestInventoryReadService InventoryReader { get; } = new();
@@ -78,6 +81,8 @@ namespace StockFlow.API.Tests
                 services.RemoveAll<IWarehouseRepository>();
                 services.RemoveAll<IInventoryRepository>();
                 services.RemoveAll<ISupplierRepository>();
+                services.RemoveAll<IStockReservationRepository>();
+                services.RemoveAll<IStockReservationReadService>();
                 services.RemoveAll<IClock>();
                 services.RemoveAll<IProductReadService>();
                 services.RemoveAll<IWarehouseReadService>();
@@ -89,6 +94,8 @@ namespace StockFlow.API.Tests
                 services.AddSingleton<IWarehouseRepository>(Warehouses);
                 services.AddSingleton<IInventoryRepository>(Inventories);
                 services.AddSingleton<ISupplierRepository>(Suppliers);
+                services.AddSingleton<IStockReservationRepository>(Reservations);
+                services.AddSingleton<IStockReservationReadService>(ReservationReader);
                 services.AddSingleton<IClock>(
                     new FixedClock(OccurredAt));
                 services.AddSingleton<IProductReadService>(ProductReader);

@@ -205,10 +205,10 @@ namespace StockFlow.Application.Transfers.DispatchTransfer
                     cancellationToken);
 
                 if (inventory is null ||
-                    inventory.QuantityOnHand < line.Quantity)
+                    inventory.QuantityAvailable < line.Quantity)
                 {
                     throw new BusinessRuleException(
-                        $"Insufficient source stock for product '{product.Sku}'.");
+                        $"Insufficient available source stock for product '{product.Sku}'.");
                 }
 
                 prepared.Add((line, inventory));

@@ -15,5 +15,7 @@
         public const string TransfersDispatch = "Transfers.Dispatch";
         public const string TransfersReceive = "Transfers.Receive";
         public const string TransfersRead = "Transfers.Read";
+        public const string StockReservationsManage = "StockReservations.Manage";
+        public const string StockReservationsFulfill = "StockReservations.Fulfill";
     }
 }

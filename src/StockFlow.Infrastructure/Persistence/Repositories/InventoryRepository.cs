@@ -17,6 +17,25 @@ namespace StockFlow.Infrastructure.Persistence.Repositories
             _context = context;
         }
 
+        public Task<InventoryEntity?> GetByIdAsync(
+            Guid inventoryId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_saveFailed)
+            {
+                throw new InvalidOperationException(
+                    "A previous save failed. Discard this scope and its DbContext.");
+            }
+
+            return _context.Inventories
+                .AsTracking()
+                .SingleOrDefaultAsync(
+                    inventory => inventory.Id == inventoryId,
+                    cancellationToken);
+        }
+
         public Task<InventoryEntity?> GetByProductAndWarehouseAsync(
             Guid productId,
             Guid warehouseId,

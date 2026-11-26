@@ -136,6 +136,8 @@ namespace StockFlow.API.Controllers
                 StockFlowPolicies.TransfersDispatch,
                 StockFlowPolicies.TransfersReceive,
                 StockFlowPolicies.TransfersRead,
+                StockFlowPolicies.StockReservationsManage,
+                StockFlowPolicies.StockReservationsFulfill,
             };
 
             var capabilities = new List<string>();

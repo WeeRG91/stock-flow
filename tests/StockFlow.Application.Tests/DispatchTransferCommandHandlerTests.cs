@@ -11,6 +11,66 @@ namespace StockFlow.Application.Tests;
 public sealed class DispatchTransferCommandHandlerTests
 {
     [Theory]
+    [InlineData(7)]
+    [InlineData(10)]
+    public async Task HandleAsync_WhenSourceStockIsReserved_RejectsBeforeMutation(int reserved)
+    {
+        var fixture = new Fixture();
+        fixture.SourceInventory.ReserveStock(reserved);
+
+        await Assert.ThrowsAsync<BusinessRuleException>(
+            () => fixture.Handler.HandleAsync(fixture.Command));
+
+        AssertUnchanged(fixture);
+        Assert.Equal(reserved, fixture.SourceInventory.QuantityReserved);
+        Assert.Equal(10 - reserved, fixture.SourceInventory.QuantityAvailable);
+        Assert.All(fixture.Transfer.Lines, line => Assert.Equal(0, line.DispatchedQuantity));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenDispatchUsesExactlyAvailableStock_PreservesReservations()
+    {
+        var fixture = new Fixture(requested: 4);
+        fixture.SourceInventory.ReserveStock(6);
+
+        await fixture.Handler.HandleAsync(fixture.Command);
+
+        Assert.Equal(TransferStatus.Dispatched, fixture.Transfer.Status);
+        Assert.Equal(6, fixture.SourceInventory.QuantityOnHand);
+        Assert.Equal(6, fixture.SourceInventory.QuantityReserved);
+        Assert.Equal(0, fixture.SourceInventory.QuantityAvailable);
+        Assert.Equal(-4, Assert.Single(fixture.SourceInventory.PendingMovements).QuantityChange);
+        Assert.Equal(7, fixture.DestinationInventory.QuantityOnHand);
+        Assert.Equal(1, fixture.Transfers.DispatchSaveCallCount);
+        Assert.Single(fixture.TransferNotifier.Notifications);
+        Assert.Single(fixture.InventoryNotifier.Notifications);
+        AssertNoSeparateSaves(fixture);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenLaterLineHasReservedStock_PreservesEarlierLinesAndInventory()
+    {
+        var fixture = new Fixture();
+        var product = new Product("Synthetic desk", "TEST-DESK");
+        fixture.Products.Add(product);
+        fixture.Transfer.AddLine(product.Id, product.Sku, product.Name, 3);
+        var inventory = Fixture.Stock(product.Id, fixture.Source.Id, 5);
+        inventory.ReserveStock(3);
+        fixture.Inventories.Add(inventory);
+
+        await Assert.ThrowsAsync<BusinessRuleException>(
+            () => fixture.Handler.HandleAsync(fixture.Command));
+
+        AssertUnchanged(fixture);
+        Assert.Equal(0, fixture.SourceInventory.QuantityReserved);
+        Assert.Equal(5, inventory.QuantityOnHand);
+        Assert.Equal(3, inventory.QuantityReserved);
+        Assert.Equal(2, inventory.QuantityAvailable);
+        Assert.Empty(inventory.PendingMovements);
+        Assert.All(fixture.Transfer.Lines, line => Assert.Equal(0, line.DispatchedQuantity));
+    }
+
+    [Theory]
     [InlineData(4)]
     [InlineData(10)]
     public async Task HandleAsync_DispatchesAndRemovesSourceStockInOneSave(int requested)

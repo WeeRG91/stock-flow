@@ -75,6 +75,11 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.Property<int>("QuantityOnHand")
                         .HasColumnType("integer");
 
+                    b.Property<int>("QuantityReserved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int?>("ReorderThreshold")
                         .HasColumnType("integer");
 
@@ -97,6 +102,8 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("Inventories", null, t =>
                         {
                             t.HasCheckConstraint("CK_Inventories_QuantityOnHand_NonNegative", "\"QuantityOnHand\" >= 0");
+
+                            t.HasCheckConstraint("CK_Inventories_QuantityReserved_Valid", "\"QuantityReserved\" >= 0 AND \"QuantityReserved\" <= \"QuantityOnHand\"");
 
                             t.HasCheckConstraint("CK_Inventories_ReorderThreshold_Positive", "\"ReorderThreshold\" IS NULL OR \"ReorderThreshold\" > 0");
                         });
@@ -369,6 +376,67 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_StockMovements_QuantityChange_NonZero", "\"QuantityChange\" <> 0");
 
                             t.HasCheckConstraint("CK_StockMovements_TypeAndSign", "(\"Type\" = 1 AND \"QuantityChange\" > 0)\r\nOR (\"Type\" = 2 AND \"QuantityChange\" < 0)\r\nOR (\"Type\" = 3)");
+                        });
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.StockReservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("FulfilledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("FulfilledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InventoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ReleasedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReleasedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_StockReservations_RequestId");
+
+                    b.HasIndex("InventoryId", "Status");
+
+                    b.ToTable("StockReservations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_StockReservations_Quantity_Positive", "\"Quantity\" > 0");
+
+                            t.HasCheckConstraint("CK_StockReservations_RequestId_NotEmpty", "\"RequestId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_StockReservations_StatusAndHistory", "(\r\n    \"Status\" = 1\r\n    AND \"ReleasedAt\" IS NULL\r\n    AND \"ReleasedByUserId\" IS NULL\r\n    AND \"FulfilledAt\" IS NULL\r\n    AND \"FulfilledByUserId\" IS NULL\r\n)\r\nOR\r\n(\r\n    \"Status\" = 2\r\n    AND \"ReleasedAt\" IS NOT NULL\r\n    AND \"ReleasedAt\" >= \"CreatedAt\"\r\n    AND \"ReleasedByUserId\" IS NOT NULL\r\n    AND \"ReleasedByUserId\" <> '00000000-0000-0000-0000-000000000000'::uuid\r\n    AND \"FulfilledAt\" IS NULL\r\n    AND \"FulfilledByUserId\" IS NULL\r\n)\r\nOR\r\n(\r\n    \"Status\" = 3\r\n    AND \"FulfilledAt\" IS NOT NULL\r\n    AND \"FulfilledAt\" >= \"CreatedAt\"\r\n    AND \"FulfilledByUserId\" IS NOT NULL\r\n    AND \"FulfilledByUserId\" <> '00000000-0000-0000-0000-000000000000'::uuid\r\n    AND \"ReleasedAt\" IS NULL\r\n    AND \"ReleasedByUserId\" IS NULL\r\n)");
                         });
                 });
 
@@ -691,6 +759,15 @@ namespace StockFlow.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("StockFlow.Domain.Entities.StockMovement", b =>
+                {
+                    b.HasOne("StockFlow.Domain.Entities.Inventory", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StockFlow.Domain.Entities.StockReservation", b =>
                 {
                     b.HasOne("StockFlow.Domain.Entities.Inventory", null)
                         .WithMany()

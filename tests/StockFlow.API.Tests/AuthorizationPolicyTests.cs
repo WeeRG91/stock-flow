@@ -38,7 +38,9 @@ public class AuthorizationPolicyTests
         StockFlowPolicies.BackgroundJobsManage,
         StockFlowPolicies.PurchaseOrdersRead,
         StockFlowPolicies.PurchaseOrdersManage,
-        StockFlowPolicies.PurchaseOrdersApprove
+        StockFlowPolicies.PurchaseOrdersApprove,
+        StockFlowPolicies.StockReservationsManage,
+        StockFlowPolicies.StockReservationsFulfill
     ];
 
     public static IEnumerable<object[]> RoleMatrix()
@@ -59,6 +61,8 @@ public class AuthorizationPolicyTests
             yield return [role, StockFlowPolicies.InventoryRead, true];
             yield return [role, StockFlowPolicies.SuppliersRead, true];
             yield return [role, StockFlowPolicies.InventoryReceive, receive];
+            yield return [role, StockFlowPolicies.StockReservationsManage, receive];
+            yield return [role, StockFlowPolicies.StockReservationsFulfill, receive];
             yield return [role, StockFlowPolicies.SuppliersManage, manageSuppliers];
             yield return [role, StockFlowPolicies.BackgroundJobsManage, manageJobs];
         }

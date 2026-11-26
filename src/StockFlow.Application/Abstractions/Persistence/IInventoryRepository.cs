@@ -4,6 +4,10 @@ namespace StockFlow.Application.Abstractions.Persistence
 {
     public interface IInventoryRepository
     {
+        Task<InventoryEntity?> GetByIdAsync(
+            Guid inventoryId,
+            CancellationToken cancellationToken = default);
+
         Task<InventoryEntity?> GetByProductAndWarehouseAsync(
             Guid productId,
             Guid warehouseId,

@@ -85,6 +85,11 @@ namespace StockFlow.API.Errors
                     "Transfer conflict",
                     transferConflict.Message),
 
+                StockReservationConflictException reservationConflict => (
+                    StatusCodes.Status409Conflict,
+                    "Stock reservation conflict",
+                    reservationConflict.Message),
+
                 _ => (
                     StatusCodes.Status500InternalServerError,
                     "Internal server error",

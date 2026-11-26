@@ -21,14 +21,19 @@ export function useInventoryRealtime() {
     function refreshInventory() {
       if (disposed) return;
 
-      void queryClient
-        .invalidateQueries({ queryKey: ["inventory"] })
-        .catch((error: unknown) => {
-          console.warn(
-            "Couldn't refresh inventory after a notification.",
-            error,
-          );
-        });
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["inventory"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["stock-reservations"],
+        }),
+      ]).catch((error: unknown) => {
+        console.warn(
+          "Couldn't refresh inventory and reservations after a notification.",
+          error,
+        );
+      });
     }
 
     connection.on("InventoryChanged", refreshInventory);
